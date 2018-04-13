@@ -1,6 +1,6 @@
 /**
  * @file cnwn.h
- * Plz more info!
+ * Small C99 library and tools for Neverwinter Nights.
  */
 #ifndef CNWN_H
 #define CNWN_H
@@ -112,12 +112,18 @@
 #define CNWN_READ_WRITE_BUFFER_SIZE 8192
 
 /**
+ * The maximum size of an ERF entry key (including zero terminator).
+ * @note The largest key allowed for an ERF entry is 16 (V1.0) and 32 (V1.1) bytes.
+ */
+#define CNWN_ERF_ENTRY_KEY_MAX_SIZE 33
+
+/**
  * Describes an ERF entry type.
  */
 enum cnwn_ResourceType_e {
 
     /**
-     * Invalid ERF entry type.
+     * Unknown resource type.
      */
     CNWN_RESOURCE_TYPE_NONE = 0,
 
@@ -743,153 +749,149 @@ struct cnwn_Version_s {
      */
     int minor;
 };
-    
+
 /**
- * Contains the header information for an ERF file.
+ * ERF header.
  */
 struct cnwn_ERFHeader_s {
 
     /**
-     * The deserialized string type (for debug purposes).
-     */
-    char type_str[5];
-    
-    /**
-     * The deserialized string version (for debug purposes).
-     */
-    char version_str[5];
-    
-    /**
-     * What type of ERF file is this.
+     * The type of resource the ERF is.
      */
     cnwn_ResourceType type;
 
     /**
-     * The version of the ERF file.
+     * The type string as it was read from a file.
+     */
+    char type_str[5];
+    
+    /**
+     * The version.
      */
     cnwn_Version version;
 
     /**
-     * Localized strings.
+     * The version string as it was read from a file.
      */
-    struct {
-
-        /**
-         * Count.
-         */
-        uint32_t count;
+    char version_str[5];
     
-        /**
-         * Size.
-         */
-        uint32_t size;
-        
-        /**
-         * Offset.
-         */
-        uint32_t offset;
-    } localized_strings;
+    /**
+     * The number of localized strings.
+     */
+    uint32_t num_localized_strings;
 
     /**
-     * Entries.
+     * The offset of the localized strings.
      */
-    struct {
-
-        /**
-         * Count.
-         */
-        uint32_t count;
-        
-        /**
-         * Offset for the string keys.
-         */
-        uint32_t keys_offset;
-        
-        /**
-         * Offset for the resources.
-         */
-        uint32_t resources_offset;
-    } entries;
+    uint32_t localized_strings_offset;
+    
+    /**
+     * The size of the localized strings.
+     */
+    uint32_t localized_strings_size;
+    
+    /**
+     * The number of entries.
+     */
+    uint32_t num_entries;
 
     /**
-     * The rest of the header, don't know what it is.
+     * The offset of the entry keys.
      */
-    char rest[128];
+    uint32_t keys_offset;
+    
+    /**
+     * The offset for the entry resources.
+     */
+    uint32_t resources_offset;
 };
 
 /**
- * Represents an entry of an ERF file.
+ * ERF entry.
  */
 struct cnwn_ERFEntry_s {
 
     /**
-     * The key (name) of the entry.
+     * The resource type the entry is.
      */
-    char key[64];
+    cnwn_ResourceType type;
 
     /**
-     * The offset where the key is found.
+     * The key (name) of the resource.
+     */
+    char key[CNWN_ERF_ENTRY_KEY_MAX_SIZE];
+
+    /**
+     * The offset to the key.
      */
     uint32_t key_offset;
-
-    /**
-     * Resource ID.
-     */
-    uint32_t resource_id;
-
-    /**
-     * Resource type.
-     */
-    cnwn_ResourceType resource_type;
-
-    /**
-     * The ERF resource type.
-     */
-    uint16_t erf_type;
     
     /**
-     * The offset where the resource is found.
+     * The offset to the resource.
      */
     uint32_t resource_offset;
 
     /**
-     * The size of the resource.
+     * The ID of the resource.
      */
-    uint32_t resource_size;
-    
-    /**
-     * Unused.
-     */
-    uint16_t unused;
+    uint16_t resource_id;
 };
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+////////////////////////////////////////////////////////////////
+//
+//
+// Constants.
+//
+//
+////////////////////////////////////////////////////////////////
+
+/**
+ * The character used to separate path elements.
+ **/
+extern CNWN_PUBLIC const char CNWN_PATH_SEPARATOR;
+
+/**
+ * The character used to escape path characters.
+ **/
+extern CNWN_PUBLIC const char CNWN_PATH_ESCAPE;
+
 /**
  * Info about each resource type.
+ * @note Defined in @ref src/resources.c
  */
 extern CNWN_PUBLIC const cnwn_ResourceInfo CNWN_RESOURCE_INFOS[CNWN_MAX_RESOURCE_TYPE];
 
-/**
- * Get a resource type from an ERF resource type (as found in the entries).
- * @param erf_type The entry's resource type.
- * @returns A resource type or CNWN_RESOURCE_TYPE_NONE if @p erf_type is invalid.
- */
-extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_erf_type(int erf_type);
-
-/**
- * Get a resource type from an extension (a 3 letter combination).
- * @param extension The extension to get the resource type from.
- * @returns A resource type or CNWN_RESOURCE_TYPE_NONE if @p extension is invalid.
- */
-extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_extension(const char * extension);
+////////////////////////////////////////////////////////////////
+//
+//
+// Common functions (IO and what not).
+//
+//
+////////////////////////////////////////////////////////////////
 
 /**
  * Get the last error message.
+ * @returns A pointer to the last error message, never NULL.
  */
 extern CNWN_PUBLIC const char * cnwn_get_error(void);
+
+/**
+ * Set an error.
+ * @param format The error format.
+ * @param args The variable arguments.
+ */
+extern CNWN_PRIVATE void cnwn_set_error_va(const char * format, va_list args);
+
+/**
+ * Set an error.
+ * @param format The error format.
+ */
+extern CNWN_PRIVATE void cnwn_set_error(const char * format, ...) CNWN_PRINTF(1, 2);
 
 /**
  * Byte swap an unsigned 32-bit integer from little endian to big endian.
@@ -908,13 +910,47 @@ extern CNWN_PUBLIC uint32_t cnwn_swap32(uint32_t i);
 extern CNWN_PUBLIC uint16_t cnwn_swap16(uint16_t i);
 
 /**
+ * Seek a file descriptor.
+ * @param fd The file to seek.
+ * @param offset Seek to this offset, a negative value will seek backwards.
+ * @return The new offset or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_seek(int fd, int64_t offset);
+
+/**
+ * Add offset to seek a file descriptor.
+ * @param fd The file to seek.
+ * @param delta_offset Seek to current offset + this offset.
+ * @return The new offset or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_seek_delta(int fd, int64_t delta_offset);
+
+/**
+ * Seek end of file.
+ * @param fd The file to seek.
+ * @return The new offset or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_seek_end(int fd);
+
+/**
+ * Get the current seek offset.
+ * @param fd The file to get seek offset for.
+ * @return The offset or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_seek_cur(int fd);
+
+/**
  * Read an unsigned 32-bit integer from a file.
  * @param fd The file to read from.
- * @param[out] ret_i Return the integer here, pass NULL to omit.
+ * @param[out] ret_i Return the integer here.
  * @return The number of read bytes or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_read_uint32(int fd, uint32_t * ret_i);
+extern CNWN_PUBLIC int64_t cnwn_read_uint32(int fd, uint32_t * ret_i);
 
 /**
  * Write an unsigned 32-bit integer to a file.
@@ -923,16 +959,16 @@ extern CNWN_PUBLIC int cnwn_read_uint32(int fd, uint32_t * ret_i);
  * @return The number of written bytes or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_write_uint32(int fd, uint32_t i);
+extern CNWN_PUBLIC int64_t cnwn_write_uint32(int fd, uint32_t i);
 
 /**
  * Read an unsigned 16-bit integer from a file.
  * @param fd The file to read from.
- * @param[out] ret_i Return the integer here, pass NULL to omit.
+ * @param[out] ret_i Return the integer here.
  * @return The number of read bytes or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_read_uint16(int fd, uint16_t * ret_i);
+extern CNWN_PUBLIC int64_t cnwn_read_uint16(int fd, uint16_t * ret_i);
 
 /**
  * Write an unsigned 16-bit integer to a file.
@@ -941,7 +977,78 @@ extern CNWN_PUBLIC int cnwn_read_uint16(int fd, uint16_t * ret_i);
  * @return The number of written bytes or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_write_uint16(int fd, uint16_t i);
+extern CNWN_PUBLIC int64_t cnwn_write_uint16(int fd, uint16_t i);
+
+/**
+ * Read fixed size data.
+ * @param fd The file to read from.
+ * @param size The size of the fixed size data.
+ * @param[out] ret_data Return the data here, pass NULL to omit (bytes will still be read and discarded).
+ * @return The number of read bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_read_bytes(int fd, int64_t size, uint8_t * ret_s);
+
+/**
+ * Write fixed size data.
+ * @param fd The file to write to.
+ * @param size The size of the data.
+ * @param data The data to write or NULL to write zeroes.
+ * @return The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_write_bytes(int fd, int64_t size, const uint8_t * data);
+
+/**
+ * Clean-up a string as required for resource names.
+ * @param s The string to clean.
+ * @param max_size The max size for the returned string (including zero terminator).
+ * @param[out] ret_s Return the cleaned string here, NULL or the same as @p s is acceptable.
+ * @return The new length of the string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_clean_string(const char * s, int max_size, char * ret_s);
+
+////////////////////////////////////////////////////////////////
+//
+//
+// Resource functions.
+//
+//
+////////////////////////////////////////////////////////////////
+
+/**
+ * Get a resource type from an ERF resource type.
+ * @param erf_type The ERF type.
+ * @returns The resource type or CNWN_RESOURCE_TYPE_NONE if @p erf_type is invalid.
+ */
+extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_erf_type(int erf_type);
+
+/**
+ * Get a resource type from an ERF resource type.
+ * @param extension The filename extension.
+ * @returns The resource type or CNWN_RESOURCE_TYPE_NONE if @p extension is invalid.
+ */
+extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_extension(const char * extension);
+
+////////////////////////////////////////////////////////////////
+//
+//
+// ERF functions.
+//
+//
+////////////////////////////////////////////////////////////////
+
+/**
+ * Read the header and entries from an ERF file.
+ * @param fd The file to read from.
+ * @param[out] ret_header Return the header, NULL to omit.
+ * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
+ * @param[out] ret_entries Return entries here, pass NULL to omit.
+ * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries.
+ * @note This function will end by seeking the @p fd cursor to the starting offset when called.
+ */
+extern CNWN_PUBLIC int cnwn_erf_read(int fd, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+
 
 #ifdef __cplusplus
 }

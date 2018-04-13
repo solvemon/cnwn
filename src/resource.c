@@ -139,3 +139,4 @@ cnwn_ResourceType cnwn_resource_type_from_extension(const char * extension)
             return rt;
     return CNWN_RESOURCE_TYPE_NONE;
 }
+
