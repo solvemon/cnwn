@@ -162,7 +162,7 @@ int64_t cnwn_read_bytes(int fd, int64_t size, uint8_t * ret_data)
     return 0;
 }
 
-int64_t cnwn_write_string(int fd, int64_t size, const uint8_t * data)
+int64_t cnwn_write_bytes(int fd, int64_t size, const uint8_t * data)
 {
     if (size > 0) {
         if (data != NULL) {

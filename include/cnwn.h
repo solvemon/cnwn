@@ -118,6 +118,11 @@
 #define CNWN_ERF_ENTRY_KEY_MAX_SIZE 33
 
 /**
+ * The longest allowed path.
+ */
+#define CNWN_PATH_MAX_SIZE 8192
+
+/**
  * Describes an ERF entry type.
  */
 enum cnwn_ResourceType_e {
@@ -834,7 +839,22 @@ struct cnwn_ERFEntry_s {
     /**
      * The ID of the resource.
      */
-    uint16_t resource_id;
+    uint32_t resource_id;
+
+    /**
+     * The ERF type of the resource.
+     */
+    uint16_t erf_type;
+    
+    /**
+     * Some unused bytes.
+     */
+    uint16_t unused;
+
+    /**
+     * The size of the resource.
+     */
+    uint32_t resource_size;
 };
 
 
@@ -862,7 +882,7 @@ extern CNWN_PUBLIC const char CNWN_PATH_ESCAPE;
 
 /**
  * Info about each resource type.
- * @note Defined in @ref src/resources.c
+ * @note Defined in src/resources.c
  */
 extern CNWN_PUBLIC const cnwn_ResourceInfo CNWN_RESOURCE_INFOS[CNWN_MAX_RESOURCE_TYPE];
 
@@ -987,7 +1007,7 @@ extern CNWN_PUBLIC int64_t cnwn_write_uint16(int fd, uint16_t i);
  * @return The number of read bytes or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int64_t cnwn_read_bytes(int fd, int64_t size, uint8_t * ret_s);
+extern CNWN_PUBLIC int64_t cnwn_read_bytes(int fd, int64_t size, uint8_t * ret_data);
 
 /**
  * Write fixed size data.
@@ -1030,6 +1050,26 @@ extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_erf_type(int erf_ty
  */
 extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_extension(const char * extension);
 
+/**
+ * Convert a resource type and entry key to a filename.
+ * @param resource_type The resource type (will be used to determine the filename extension).
+ * @param key The entry key (max 16 characters for V1.0 and max 32 characters for V1.1, excluding zero terminator), must not be NULL or empty.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param ret_filename Return the filename here, NULL to omit.
+ * @return The length (or required length if @p ret_filename is NULL) of the filename.
+ */
+extern CNWN_PUBLIC int cnwn_resource_to_filename(cnwn_ResourceType resource_type, const char * key, int max_size, char * ret_filename);
+
+/**
+ * Convert a filename into a resource type and entry key.
+ * @param filename The filename to parse, only the (file) base part of the path will be used (directories will be removed).
+ * @param[out] ret_resource_type The resource type (determined by the filename's extension).
+ * @param max_size The maximum size of the return key (including zero terminator), should be at least @p ref CNWN_ERF_ENTRY_KEY_MAX_SIZE.
+ * @param[out] ret_key The key, NULL to omit.
+ * @return The length (or required length if @p ret_key is NULL) of the key.
+ */
+extern CNWN_PUBLIC int cnwn_resource_from_filename(const char * filename, cnwn_ResourceType * ret_resource_type, int max_size, char * ret_key);
+
 ////////////////////////////////////////////////////////////////
 //
 //
@@ -1044,10 +1084,87 @@ extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_extension(const cha
  * @param[out] ret_header Return the header, NULL to omit.
  * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
  * @param[out] ret_entries Return entries here, pass NULL to omit.
- * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries.
- * @note This function will end by seeking the @p fd cursor to the starting offset when called.
+ * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
  */
 extern CNWN_PUBLIC int cnwn_erf_read(int fd, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+
+/**
+ * Write the header and entries to an ERF file.
+ * @param fd The file to write to.
+ * @param header The ERF header.
+ * @param num_entries The number of entries to write.
+ * @param entries The entries to write.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_write(int fd, const cnwn_ERFHeader * header, int num_entries, const cnwn_ERFEntry * entries);
+
+/**
+ * Extract a single entry from an ERF file and write to output file.
+ * @param fd The file to read the entry from.
+ * @param offset The offset where the entry can be found in @p fd.
+ * @param size The size of the entry to write.
+ * @param output_fd The output file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_entry_extract(int fd, uint32_t offset, uint32_t size, int output_fd);
+
+/**
+ * Read the header and entries from an ERF file.
+ * @param path A path to the ERF file.
+ * @param[out] ret_header Return the header, NULL to omit.
+ * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
+ * @param[out] ret_entries Return entries here, pass NULL to omit.
+ * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_read_path(const char * path, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+
+/**
+ * Write the header and entries to an ERF file.
+ * @param path A path to the ERF file.
+ * @param header The ERF header.
+ * @param num_entries The number of entries to write.
+ * @param entries The entries to write.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_write_path(const char * path, const cnwn_ERFHeader * header, int num_entries, const cnwn_ERFEntry * entries);
+
+/**
+ * Extract a single entry from an ERF file and write to output file.
+ * @param fd The file to read the entry from.
+ * @param offset The offset where the entry can be found in @p fd.
+ * @param size The size of the entry to write.
+ * @param output_fd The output file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_entry_extract(int fd, uint32_t offset, uint32_t size, int output_fd);
+
+/**
+ * Extract a single entry from an ERF file and write to output file.
+ * @param fd The file to read the entry from.
+ * @param offset The offset where the entry can be found in @p fd.
+ * @param size The size of the entry to write.
+ * @param output_path A path to the output file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_entry_extract_path(int fd, uint32_t offset, uint32_t size, const char * output_path);
+
+/**
+ * Extract a single entry from an ERF file and write to output file.
+ * @param path A path to the ERF file.
+ * @param offset The offset where the entry can be found in @p fd.
+ * @param size The size of the entry to write.
+ * @param output_path A path to the output file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_entry_extract_path2(const char * path, uint32_t offset, uint32_t size, const char * output_path);
 
 
 #ifdef __cplusplus

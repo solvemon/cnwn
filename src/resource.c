@@ -129,14 +129,90 @@ cnwn_ResourceType cnwn_resource_type_from_extension(const char * extension)
 {
     if (extension == NULL || extension[0] == 0)
         return CNWN_RESOURCE_TYPE_NONE;
-    char usable_extension[5] = {0};
+    char usable_extension[4] = {0};
     int soffset = 0;
     for (int i = 0; i < 3 && extension[i] != 0; i++)
         if (extension[i] > 32)
             usable_extension[soffset++] = (extension[i] >= 'A' && extension[i] <= 'Z' ? extension[i] + 32 : extension[i]);
-    for (cnwn_ResourceType rt = CNWN_RESOURCE_TYPE_NONE + 1; rt < CNWN_MAX_RESOURCE_TYPE; rt++) 
-        if (strcmp(usable_extension, CNWN_RESOURCE_INFOS[rt].extension) == 0)
+    for (cnwn_ResourceType rt = CNWN_RESOURCE_TYPE_NONE + 1; rt < CNWN_MAX_RESOURCE_TYPE; rt++) {
+        if (strcmp(usable_extension, CNWN_RESOURCE_INFOS[rt].extension) == 0) 
             return rt;
+    }
     return CNWN_RESOURCE_TYPE_NONE;
 }
 
+
+int cnwn_resource_to_filename(cnwn_ResourceType resource_type, const char * key, int max_size, char * ret_filename)
+{
+    if (key == NULL || key[0] == 0 || (max_size <= 0 && ret_filename != NULL)) {
+        if (ret_filename != NULL && max_size > 0)
+            ret_filename[0] = 0;
+        return 0;
+    }
+    char tmps[CNWN_PATH_MAX_SIZE];
+    const char * ext = CNWN_RESOURCE_TYPE_EXTENSION(resource_type);
+    int slen = 0;
+    for (int i = 0; key[i] != 0 && slen < sizeof(tmps) - 1 && i < 32; i++)
+        if (key[i] > 32)
+            tmps[slen++] = key[i];
+    if (ext != NULL && ext[0] != 0 && slen < sizeof(tmps) - 1) {
+        tmps[slen++] = '.';
+        for (int i = 0; ext[i] != 0 && slen < sizeof(tmps) - 1 && i < 3; i++)
+            if (ext[i] > 32)
+                tmps[slen++] = ext[i];
+    }
+    tmps[slen] = 0;
+    if (max_size > 0) {
+        slen = CNWN_MIN(slen, max_size - 1);
+        if (ret_filename != NULL) {
+            if (slen > 0)
+                memcpy(ret_filename, tmps, sizeof(char) * slen);
+            ret_filename[slen] = 0;
+        }
+    }
+    return slen;
+}
+
+int cnwn_resource_from_filename(const char * filename, cnwn_ResourceType * ret_resource_type, int max_size, char * ret_key)
+{
+    if (filename == NULL || filename[0] == 0) {
+        if (max_size > 0 && ret_key != NULL)
+            ret_key[0] = 0;
+        if (ret_resource_type != NULL)
+            *ret_resource_type = CNWN_RESOURCE_TYPE_NONE;
+        return 0;
+    }
+    int flen = strlen(filename);
+    char ext[4] = {0};
+    char base[CNWN_PATH_MAX_SIZE];
+    int offset = flen - 1;
+    while (offset >= 0 && filename[offset] != '.')
+        offset--;
+    int extlen = flen - offset - 1;
+    if (extlen > 0 && extlen <= 3)
+        memcpy(ext, filename + offset + 1, sizeof(char) * extlen);
+    for (int i = 0; ext[i] != 0 && i < 3; i++)
+        if (ext[i] >= 'A' && ext[i] <= 'Z')
+            ext[i] += 32;
+    int offset2 = offset - 1;
+    while (offset2 >= 0 && filename[offset2] != CNWN_PATH_SEPARATOR)
+        offset2--;    
+    int baselen = offset - offset2 - 1;
+    baselen = CNWN_MIN(baselen, sizeof(base) - 1);
+    int retlen = 0;
+    for (int i = 0; i < baselen; i++)
+        if (filename[offset2 + 1 + i] > 32)
+            base[retlen++] = filename[offset2 + 1 + i];
+    if (ret_resource_type != NULL)
+        *ret_resource_type = cnwn_resource_type_from_extension(ext);
+    retlen = CNWN_MIN(retlen, 32);
+    if (max_size > 0) {
+        retlen = CNWN_MIN(retlen, max_size - 1);
+        if (ret_key != NULL) {
+            if (retlen > 0) 
+                memcpy(ret_key, base, sizeof(char) * retlen);
+            ret_key[retlen] = 0;
+        }
+    }
+    return retlen;
+}
