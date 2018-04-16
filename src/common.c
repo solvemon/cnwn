@@ -267,20 +267,73 @@ int64_t cnwn_write_bytes(int fd, int64_t size, const uint8_t * data)
     return 0;
 }
 
-int cnwn_clean_string(const char * s, int max_size, char * ret_s)
+int cnwn_exists(const char * path)
 {
-    int offset = 0;
-    if (s != NULL) {
-        for (int i = 0; s[i] != 0 && (offset < max_size - 1 || (max_size <= 0 && ret_s == NULL)); i++) {
-            if (s[i] > 32) {
-                if (max_size > 0 && ret_s != NULL)
-                    ret_s[offset++] = s[i];
-                else
-                    offset++;
+    struct stat st = {0};
+    if (stat(path, &st) < 0) {
+        if (errno != ENOENT)
+            return 0;
+        cnwn_set_error("invalid path '%s', %s", path, strerror(errno));
+        return -1;
+    }
+    return 1;
+}
+
+int cnwn_mkdirs(const char * path)
+{
+    int ret = 0;
+    if (path != NULL && path[0] != 0) {
+        for (int i = 0; path[i] != 0 && i < CNWN_PATH_MAX_SIZE - 1; i++) {
+            if (path[i] == CNWN_PATH_SEPARATOR) {
+                bool escaped = false;
+                for (int j = i - 1; j > 0 && path[j] == CNWN_PATH_ESCAPE; j--)
+                    escaped = (escaped ? false : true);
+                if (!escaped) {
+                    char tmppath[CNWN_PATH_MAX_SIZE];
+                    memcpy(tmppath, path, sizeof(char) * i);
+                    tmppath[i] = 0;
+                    cnwn_unescape_path(tmppath);
+                    int test = cnwn_exists(tmppath);
+                    if (test < 0) 
+                        return -1;
+                    if (test == 0) {
+                        int mkret = mkdir(tmppath, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP);
+                        if (mkret < 0) {
+                            cnwn_set_error("could not create dir '%s', %s\n", tmppath, strerror(errno));
+                            return -1;
+                        }
+                        ret++;
+                    }
+                }
+            }
+        }
+        int plen = strlen(path);
+        if (plen > 0) {
+            char tmppath[CNWN_PATH_MAX_SIZE];
+            memcpy(tmppath, path, sizeof(char) * plen);
+            tmppath[plen] = 0;
+            cnwn_unescape_path(tmppath);
+            int test = cnwn_exists(tmppath);
+            if (test < 0) 
+                return -1;
+            if (test == 0) {
+                int mkret = mkdir(tmppath, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP);
+                if (mkret < 0) {
+                    cnwn_set_error("could not create dir '%s', %s\n", tmppath, strerror(errno));
+                    return -1;
+                }
+                ret++;
             }
         }
     }
-    if (ret_s != NULL)
-        ret_s[offset] = 0;
-    return offset;
+    return ret;
+}
+
+int cnwn_unescape_path(char * path)
+{
+    if (path != NULL) {
+        int len = strlen(path);
+        return len;
+    }
+    return 0;
 }

@@ -1,6 +1,6 @@
 #include "cnwn/erf.h"
 
-int cnwn_erf_read_contents(int fd, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
+int cnwn_erf_read_contents(int fd, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
 {
     cnwn_ERFHeader tmpheader = {0};
     cnwn_ERFHeader * header = (ret_header != NULL ? ret_header : &tmpheader);
@@ -13,7 +13,7 @@ int cnwn_erf_read_contents(int fd, cnwn_ERFHeader * ret_header, int max_entries,
     }
     for (int64_t i = 0; i < ret && i < 4; i++)
         header->type_str[i] = data[i];
-    cnwn_clean_string(header->type_str, 128, tmps);
+    cnwn_resource_key_clean(header->type_str, 128, tmps);
     header->type = cnwn_resource_type_from_extension(tmps);
     if (header->type <= CNWN_RESOURCE_TYPE_NONE || header->type >= CNWN_MAX_RESOURCE_TYPE) {
         cnwn_set_error("invalid resource type (%s)", header->type_str);
@@ -157,15 +157,30 @@ int cnwn_erf_read_contents(int fd, cnwn_ERFHeader * ret_header, int max_entries,
     return num_entries;
 }
 
-int cnwn_erf_read_contents_path(const char * path, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
+int cnwn_erf_read_contents_path(const char * path, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
 {
     int fd = open(path, O_RDONLY, 0);
     if (fd < 0) {
         cnwn_set_error("error opening \"%s\" (%s)", path, strerror(errno));
         return -1;
     }
-    int ret = cnwn_erf_read_contents(fd, ret_header, max_entries, ret_entries);
+    int ret = cnwn_erf_read_contents(fd, regexps, ret_header, max_entries, ret_entries);
     close(fd);
+    return ret;
+}
+
+int cnwn_erf_read_contents_path_fd(const char * path, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries, int * ret_fd)
+{
+    int fd = open(path, O_RDONLY, 0);
+    if (fd < 0) {
+        cnwn_set_error("error opening \"%s\" (%s)", path, strerror(errno));
+        return -1;
+    }
+    int ret = cnwn_erf_read_contents(fd, regexps, ret_header, max_entries, ret_entries);
+    if (ret_fd != NULL)
+        *ret_fd = fd;
+    else
+        close(fd);
     return ret;
 }
 

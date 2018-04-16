@@ -14,7 +14,6 @@
 #include <stdbool.h>
 #include <limits.h>
 #include <errno.h>
-#include <arpa/inet.h>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -358,13 +357,27 @@ extern CNWN_PUBLIC int64_t cnwn_read_bytes(int fd, int64_t size, uint8_t * ret_d
 extern CNWN_PUBLIC int64_t cnwn_write_bytes(int fd, int64_t size, const uint8_t * data);
 
 /**
- * Clean-up a string as required for resource names.
- * @param s The string to clean.
- * @param max_size The max size for the returned string (including zero terminator).
- * @param[out] ret_s Return the cleaned string here, NULL or the same as @p s is acceptable.
- * @return The new length of the string (excluding zero terminator).
+ * Check if the path exists.
+ * @param path The path to check.
+ * @return A positive value if the path exists, zero if not and a negative value to indicate an error.
+ * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_clean_string(const char * s, int max_size, char * ret_s);
+extern CNWN_PUBLIC int cnwn_exists(const char * path);
+
+/**
+ * Make sure that all directories specified in the path exist, if not create them.
+ * @param path The path to confirm.
+ * @return The number of created directories or a negative number on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_mkdirs(const char * path);
+
+/**
+ * Unescape path.
+ * @param path The path to unescape.
+ * @return The new length of the path (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_unescape_path(char * path);
 
 #ifdef __cplusplus
 }

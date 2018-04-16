@@ -8,6 +8,13 @@
 #include "cnwn/common.h"
 
 /**
+ * Check if a resource type is valid.
+ * @param ct The resource type enum.
+ * @returns True or false, you know.
+ */
+#define CNWN_RESOUCE_TYPE_VALID(ct) ((ct) > CNWN_RESOURCE_TYPE_NONE && (ct) < CNWN_MAX_RESOURCE_TYPE)
+
+/**
  * Get the extension for a resource type.
  * @param ct The resource type enum.
  * @returns A pointer to a string describing the enumeration extension or an empty string if the enum is out of range.
@@ -673,6 +680,21 @@ extern CNWN_PUBLIC int cnwn_resource_to_filename(cnwn_ResourceType resource_type
  * @return The length (or required length if @p ret_key is NULL) of the key.
  */
 extern CNWN_PUBLIC int cnwn_resource_from_filename(const char * filename, cnwn_ResourceType * ret_resource_type, int max_size, char * ret_key);
+
+/**
+ * Clean-up a string as required for resource keys.
+ * @param s The string to clean.
+ * @param max_size The max size for the returned string (including zero terminator).
+ * @param[out] ret_s Return the cleaned string here, NULL or the same as @p s is acceptable.
+ * @return The new length of the string (excluding zero terminator).
+ *
+ * - Must be ASCII (any other encoding will be removed).
+ * - All non-alpha and non-numeric characters will be removed (with the exception of underscore)
+ * - Must be max 16 chars (excluding zero terminator) for V1.0 files and 32 for V1.1 files.
+ *
+ * All these restrictions will be applied to the string and the result written to @p ret_s.
+ */
+extern CNWN_PUBLIC int cnwn_resource_key_clean(const char * s, int max_size, char * ret_s);
 
 #ifdef __cplusplus
 }

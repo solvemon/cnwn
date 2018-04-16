@@ -127,24 +127,39 @@ extern "C" {
 /**
  * Read the header and entries from an ERF file.
  * @param fd The file to read from.
+ * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
  * @param[out] ret_header Return the header, NULL to omit.
  * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
  * @param[out] ret_entries Return entries here, pass NULL to omit.
  * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_read_contents(int fd, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_read_contents(int fd, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
 
 /**
  * Read the header and entries from an ERF file.
  * @param path A path to the ERF file.
+ * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
  * @param[out] ret_header Return the header, NULL to omit.
  * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
  * @param[out] ret_entries Return entries here, pass NULL to omit.
  * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_read_contents_path(const char * path, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_read_contents_path(const char * path, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+
+/**
+ * Read the header and entries from an ERF file.
+ * @param path A path to the ERF file.
+ * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
+ * @param[out] ret_header Return the header, NULL to omit.
+ * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
+ * @param[out] ret_entries Return entries here, pass NULL to omit.
+ * @param[out] ret_fd Return the file that was opened from @p path (you must close it manually, unless an error is returned), NULL to omit (in which case the file is closed automatically).
+ * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error (in which case the file is closed automatically).
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_read_contents_path_fd(const char * path, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries, int * ret_fd);
 
 /**
  * Extract a single entry from an ERF file and write to output file.

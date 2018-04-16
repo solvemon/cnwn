@@ -216,3 +216,22 @@ int cnwn_resource_from_filename(const char * filename, cnwn_ResourceType * ret_r
     }
     return retlen;
 }
+
+
+int cnwn_resource_key_clean(const char * s, int max_size, char * ret_s)
+{
+    int offset = 0;
+    if (s != NULL) {
+        for (int i = 0; s[i] != 0 && (offset < max_size - 1 || (max_size <= 0 && ret_s == NULL)); i++) {
+            if ((s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= '0' && s[i] <= '9') || s[i] == '_') {
+                if (max_size > 0 && ret_s != NULL)
+                    ret_s[offset++] = s[i];
+                else
+                    offset++;
+            }
+        }
+    }
+    if (ret_s != NULL)
+        ret_s[offset] = 0;
+    return offset;
+}
