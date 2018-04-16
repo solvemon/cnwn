@@ -1,6 +1,6 @@
-#include "cnwn.h"
+#include "cnwn/erf.h"
 
-int cnwn_erf_read(int fd, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
+int cnwn_erf_read_contents(int fd, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
 {
     cnwn_ERFHeader tmpheader = {0};
     cnwn_ERFHeader * header = (ret_header != NULL ? ret_header : &tmpheader);
@@ -157,10 +157,16 @@ int cnwn_erf_read(int fd, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERF
     return num_entries;
 }
 
-
-int cnwn_erf_write(int fd, const cnwn_ERFHeader * header, int num_entries, const cnwn_ERFEntry * entries)
+int cnwn_erf_read_contents_path(const char * path, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
 {
-    return 0;
+    int fd = open(path, O_RDONLY, 0);
+    if (fd < 0) {
+        cnwn_set_error("error opening \"%s\" (%s)", path, strerror(errno));
+        return -1;
+    }
+    int ret = cnwn_erf_read_contents(fd, ret_header, max_entries, ret_entries);
+    close(fd);
+    return ret;
 }
 
 int cnwn_erf_entry_extract(int fd, uint32_t offset, uint32_t size, int output_fd)
@@ -201,30 +207,6 @@ int cnwn_erf_entry_extract(int fd, uint32_t offset, uint32_t size, int output_fd
         }
     }
     return retbytes;
-}
-
-int cnwn_erf_read_path(const char * path, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
-{
-    int fd = open(path, O_RDONLY, 0);
-    if (fd < 0) {
-        cnwn_set_error("error opening \"%s\" (%s)", path, strerror(errno));
-        return -1;
-    }
-    int ret = cnwn_erf_read(fd, ret_header, max_entries, ret_entries);
-    close(fd);
-    return ret;
-}
-
-int cnwn_erf_write_path(const char * path, const cnwn_ERFHeader * header, int num_entries, const cnwn_ERFEntry * entries)
-{
-    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-    if (fd < 0) {
-        cnwn_set_error("error opening \"%s\" (%s)", path, strerror(errno));
-        return -1;
-    }
-    int ret = cnwn_erf_write(fd, header, num_entries, entries);
-    close(fd);
-    return ret;
 }
 
 int cnwn_erf_entry_extract_path(int fd, uint32_t offset, uint32_t size, const char * output_path)

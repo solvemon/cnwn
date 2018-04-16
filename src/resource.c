@@ -1,4 +1,4 @@
-#include "cnwn.h"
+#include "cnwn/resource.h"
 
 const cnwn_ResourceInfo CNWN_RESOURCE_INFOS[CNWN_MAX_RESOURCE_TYPE] = {
     {"", "", -1},
