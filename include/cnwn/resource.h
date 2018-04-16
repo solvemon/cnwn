@@ -6,6 +6,7 @@
 #define CNWN_RESOURCE_H
 
 #include "cnwn/common.h"
+#include "cnwn/file.h"
 
 /**
  * Check if a resource type is valid.
@@ -655,11 +656,11 @@ extern CNWN_PUBLIC const cnwn_ResourceInfo CNWN_RESOURCE_INFOS[CNWN_MAX_RESOURCE
 extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_erf_type(int erf_type);
 
 /**
- * Get a resource type from an ERF resource type.
- * @param extension The filename extension.
+ * Get a resource type from a filename extension.
+ * @param path The path, if no extension is found the filename is used instead.
  * @returns The resource type or CNWN_RESOURCE_TYPE_NONE if @p extension is invalid.
  */
-extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_extension(const char * extension);
+extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_extension(const char * path);
 
 /**
  * Convert a resource type and entry key to a filename.
@@ -669,32 +670,30 @@ extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_extension(const cha
  * @param ret_filename Return the filename here, NULL to omit.
  * @return The length (or required length if @p ret_filename is NULL) of the filename.
  */
-extern CNWN_PUBLIC int cnwn_resource_to_filename(cnwn_ResourceType resource_type, const char * key, int max_size, char * ret_filename);
+extern CNWN_PUBLIC int cnwn_resource_type_and_key_to_filename(cnwn_ResourceType resource_type, const char * key, int max_size, char * ret_filename);
 
 /**
  * Convert a filename into a resource type and entry key.
- * @param filename The filename to parse, only the (file) base part of the path will be used (directories will be removed).
+ * @param path The path to parse, only the filename and extension parts of the path will be used (directories will ignored).
  * @param[out] ret_resource_type The resource type (determined by the filename's extension).
  * @param max_size The maximum size of the return key (including zero terminator), should be at least @p ref CNWN_ERF_ENTRY_KEY_MAX_SIZE.
  * @param[out] ret_key The key, NULL to omit.
  * @return The length (or required length if @p ret_key is NULL) of the key.
  */
-extern CNWN_PUBLIC int cnwn_resource_from_filename(const char * filename, cnwn_ResourceType * ret_resource_type, int max_size, char * ret_key);
+extern CNWN_PUBLIC int cnwn_resource_type_and_key_from_filename(const char * path, cnwn_ResourceType * ret_resource_type, int max_size, char * ret_key);
 
 /**
- * Clean-up a string as required for resource keys.
- * @param s The string to clean.
- * @param max_size The max size for the returned string (including zero terminator).
- * @param[out] ret_s Return the cleaned string here, NULL or the same as @p s is acceptable.
- * @return The new length of the string (excluding zero terminator).
+ * Check if a key is a valid.
+ * @param s The key to check.
+ * @return True if the key is valid, false if not.
  *
- * - Must be ASCII (any other encoding will be removed).
- * - All non-alpha and non-numeric characters will be removed (with the exception of underscore)
- * - Must be max 16 chars (excluding zero terminator) for V1.0 files and 32 for V1.1 files.
- *
- * All these restrictions will be applied to the string and the result written to @p ret_s.
+ * A valid key:
+ * - Must not be empty.
+ * - Must be ASCII.
+ * - Maximum length is 32 (16 for V1.0, but this function does not check for that).
+ * - Only alpha (a-z and A-Z), decimal (0-9) characters and underscore (_).
  */
-extern CNWN_PUBLIC int cnwn_resource_key_clean(const char * s, int max_size, char * ret_s);
+extern CNWN_PUBLIC bool cnwn_resource_key_valid(const char * s);
 
 #ifdef __cplusplus
 }

@@ -8,6 +8,12 @@
 #include "cnwn/resource.h"
 
 /**
+ * The maximum size of an ERF entry key (including zero terminator).
+ * @note The largest key allowed for an ERF entry is 16 (V1.0) and 32 (V1.1) bytes.
+ */
+#define CNWN_ERF_ENTRY_KEY_MAX_SIZE 33
+
+/**
  * @see struct cnwn_ERFHeader_e
  */
 typedef struct cnwn_ERFHeader_s cnwn_ERFHeader;
@@ -16,6 +22,22 @@ typedef struct cnwn_ERFHeader_s cnwn_ERFHeader;
  * @see struct cnwn_ERFEntry_e
  */
 typedef struct cnwn_ERFEntry_s cnwn_ERFEntry;
+
+/**
+ * Called for each entry that requires writing.
+ * @param path The path of the ERF file.
+ * @param fd The file descriptor for the ERF file, handlers have to seek this fd to find the entry.
+ * @param header The header.
+ * @param entry The entry.
+ * @param output_path An output path for the entry.
+ * @param verbose True if the handler should report info to stdout (NOT stderr!).
+ * @param force True to omit any questions about overwriting existing files.
+ * @param[out] ret_bytes The implementation will return the number of written bytes, NULL should be acceptable to omit the return value.
+ * @returns The implementation should return the number of written files or a negative number on error (plz set the error accordingly using cnwn_set_error() instead of printing to stderr).
+ * @note It is acceptable for a handler to ignore an entry and simply return 0.
+ * @note If a handler returns a negative value further processing of handlers will be discontinued.
+ */
+typedef int (*cnwn_ERFExtractionHandler)(const char * path, int fd, const cnwn_ERFHeader * header, const cnwn_ERFEntry * entry, const char * output_path, bool verbose, bool force, int64_t * ret_bytes);
 
 /**
  * ERF header.
@@ -125,86 +147,58 @@ extern "C" {
 #endif
 
 /**
+ * A (default) handler that will simply extract the binary format of an entry and save it as a normal file.
+ */
+extern CNWN_PUBLIC const cnwn_ERFExtractionHandler CNWN_ERF_EXTRACTION_HANDLER_BINARY_COPY;
+
+/**
+ * A handler that prints to stdout (if verbose) and return values as if the files would have been copied.
+ */
+extern CNWN_PUBLIC const cnwn_ERFExtractionHandler CNWN_ERF_EXTRACTION_HANDLER_DRYRUN;
+
+/**
  * Read the header and entries from an ERF file.
  * @param fd The file to read from.
  * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
+ * @param extended True for extended regular expression, false for POSIX.
  * @param[out] ret_header Return the header, NULL to omit.
  * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
- * @param[out] ret_entries Return entries here, pass NULL to omit.
+ * @param[out] ret_entries Write entries here, pass NULL to omit.
  * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_read_contents(int fd, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_read_contents(int fd, const char * regexps[], bool extended, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
 
 /**
  * Read the header and entries from an ERF file.
- * @param path A path to the ERF file.
+ * @param path The path to the ERF file.
  * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
+ * @param extended True for extended regular expression, false for POSIX.
  * @param[out] ret_header Return the header, NULL to omit.
  * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
- * @param[out] ret_entries Return entries here, pass NULL to omit.
+ * @param[out] ret_entries Write entries here, pass NULL to omit.
  * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_read_contents_path(const char * path, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_read_contents_path(const char * path, const char * regexps[], bool extended, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
 
 /**
- * Read the header and entries from an ERF file.
- * @param path A path to the ERF file.
+ * Extract entries from an ERF file to an (optional) output path.
+ * @param path The path to the ERF file.
  * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
- * @param[out] ret_header Return the header, NULL to omit.
- * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
- * @param[out] ret_entries Return entries here, pass NULL to omit.
- * @param[out] ret_fd Return the file that was opened from @p path (you must close it manually, unless an error is returned), NULL to omit (in which case the file is closed automatically).
- * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error (in which case the file is closed automatically).
+ * @param extended True for extended regular expression, false for POSIX.
+ * @param output_dir The output directory (will be created if it doesn't exist), NULL or empty for current working directory.
+ * @param verbose True to print info to stdout, false means no stdout.
+ * @param force Don't ask for stdin input, assume YES for all questions.
+ * @param exiterr True if the extraction should halt if a handler returns an error, false to simply report them to stderr and continue.
+ * @param handler A handler that will be called for each entry, NULL will use @p ref CNWN_ERF_EXTRACTION_HANDLER_BINARY_COPY.
+ * @param[out] ret_bytes The total number of written bytes, NULL to omit.
+ * @param[out] ret_entries The total number of written files, NULL to omit.
+ * @returns Zero on success or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
+ * @note If @p force is false this function may require input from stdin will hang there until it's received.
  */
-extern CNWN_PUBLIC int cnwn_erf_read_contents_path_fd(const char * path, const char * regexps[], cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries, int * ret_fd);
-
-/**
- * Extract a single entry from an ERF file and write to output file.
- * @param fd The file to read the entry from.
- * @param offset The offset where the entry can be found in @p fd.
- * @param size The size of the entry to write.
- * @param output_fd The output file.
- * @returns The number of written bytes or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- */
-extern CNWN_PUBLIC int cnwn_erf_entry_extract(int fd, uint32_t offset, uint32_t size, int output_fd);
-
-/**
- * Extract a single entry from an ERF file and write to output file.
- * @param fd The file to read the entry from.
- * @param offset The offset where the entry can be found in @p fd.
- * @param size The size of the entry to write.
- * @param output_fd The output file.
- * @returns The number of written bytes or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- */
-extern CNWN_PUBLIC int cnwn_erf_entry_extract(int fd, uint32_t offset, uint32_t size, int output_fd);
-
-/**
- * Extract a single entry from an ERF file and write to output file.
- * @param fd The file to read the entry from.
- * @param offset The offset where the entry can be found in @p fd.
- * @param size The size of the entry to write.
- * @param output_path A path to the output file.
- * @returns The number of written bytes or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- */
-extern CNWN_PUBLIC int cnwn_erf_entry_extract_path(int fd, uint32_t offset, uint32_t size, const char * output_path);
-
-/**
- * Extract a single entry from an ERF file and write to output file.
- * @param path A path to the ERF file.
- * @param offset The offset where the entry can be found in @p fd.
- * @param size The size of the entry to write.
- * @param output_path A path to the output file.
- * @returns The number of written bytes or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- */
-extern CNWN_PUBLIC int cnwn_erf_entry_extract_path2(const char * path, uint32_t offset, uint32_t size, const char * output_path);
-
+extern CNWN_PUBLIC int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, bool verbose, bool force, bool exiterr, cnwn_ERFExtractionHandler * handler, int64_t * ret_bytes, int * ret_entries);
 
 #ifdef __cplusplus
 }

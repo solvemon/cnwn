@@ -35,6 +35,7 @@ endif()
 
 set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/file.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   )
@@ -48,10 +49,14 @@ add_library(cnwn-static STATIC ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 # target_link_libraries(cnwn-static ${OPENSSL_LIBRARIES})
 
-add_executable(cnwn-erf src/cnwn-erf.c)
-target_link_libraries(cnwn-erf cnwn-static)
+# add_executable(cnwn-erf src/cnwn-erf.c)
+# target_link_libraries(cnwn-erf cnwn-static)
 
 if(BUILD_TESTS)
+  add_executable(test-file tests/test-file.c)
+  target_link_libraries(test-file cnwn-shared)
+  add_executable(test-resource tests/test-resource.c)
+  target_link_libraries(test-resource cnwn-shared)
   add_executable(test-erf tests/test-erf.c)
   target_link_libraries(test-erf cnwn-shared)
 endif()

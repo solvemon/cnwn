@@ -4,7 +4,8 @@ int main(int argc, char * argv[])
 {
     cnwn_ERFHeader header = {0};
     cnwn_ERFEntry entries[1024] = {0};
-    int ret = cnwn_erf_read_contents_path(argc > 1 ? argv[1] : "../tests/test-01.mod", NULL, &header, 1024, entries);
+    const char * regexps[] = {"\\.itp$", NULL};
+    int ret = cnwn_erf_read_contents_path(argc > 1 ? argv[1] : "../tests/test-01.mod", regexps, false, &header, 1024, entries);
     printf("Returned: %d (%s)\n", ret, ret < 0 ? cnwn_get_error() : "");
     printf("Header type: %s (%s)\n", CNWN_RESOURCE_TYPE_EXTENSION(header.type), header.type_str);
     printf("Header version: %d.%d (%s)\n", header.version.major, header.version.minor, header.version_str);
@@ -20,11 +21,8 @@ int main(int argc, char * argv[])
                entries[i].resource_size);
         
     }
-    // char key[1024];
-    // cnwn_ResourceType resource_type;
-    // ret = cnwn_resource_from_filename("abc/def/geh/test this thing asdasdh aksjhda skjdh.res", &resource_type, sizeof(key), key);
-    // printf("%d '%s' %d\n", ret, key, resource_type);
-    // ret = cnwn_resource_to_filename(CNWN_RESOURCE_TYPE_RES, "a simple test asdasd as dasd +123123213123", sizeof(key), key);
-    // printf("'%s'\n", key);
+    // ret = cnwn_erf_extract(argc > 1 ? argv[1] : "../tests/test-01.mod", NULL, false, "tmp/entries", true, false);
+    // if (ret < 0)
+    //     fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
     return 0;
 }

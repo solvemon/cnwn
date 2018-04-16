@@ -125,113 +125,90 @@ cnwn_ResourceType cnwn_resource_type_from_erf_type(int erf_type)
     return CNWN_RESOURCE_TYPE_NONE;
 }
 
-cnwn_ResourceType cnwn_resource_type_from_extension(const char * extension)
+cnwn_ResourceType cnwn_resource_type_from_extension(const char * path)
 {
-    if (extension == NULL || extension[0] == 0)
+    if (path == NULL || path[0] == 0)
         return CNWN_RESOURCE_TYPE_NONE;
-    char usable_extension[4] = {0};
-    int soffset = 0;
-    for (int i = 0; i < 3 && extension[i] != 0; i++)
-        if (extension[i] > 32)
-            usable_extension[soffset++] = (extension[i] >= 'A' && extension[i] <= 'Z' ? extension[i] + 32 : extension[i]);
+    char tmps[CNWN_PATH_MAX_SIZE];
+    int len = cnwn_path_extension(path, sizeof(tmps), tmps);
+    if (len == 0) 
+        len = cnwn_path_filename(path, sizeof(tmps), tmps);
+    for (int i = 0; i < len; i++)
+        if (tmps[i] >= 'A' && path[i] <= 'Z')
+            tmps[i] += 32;
     for (cnwn_ResourceType rt = CNWN_RESOURCE_TYPE_NONE + 1; rt < CNWN_MAX_RESOURCE_TYPE; rt++) {
-        if (strcmp(usable_extension, CNWN_RESOURCE_INFOS[rt].extension) == 0) 
+        if (strcmp(tmps, CNWN_RESOURCE_INFOS[rt].extension) == 0) 
             return rt;
     }
     return CNWN_RESOURCE_TYPE_NONE;
 }
 
-
-int cnwn_resource_to_filename(cnwn_ResourceType resource_type, const char * key, int max_size, char * ret_filename)
-{
-    if (key == NULL || key[0] == 0 || (max_size <= 0 && ret_filename != NULL)) {
-        if (ret_filename != NULL && max_size > 0)
-            ret_filename[0] = 0;
-        return 0;
-    }
-    char tmps[CNWN_PATH_MAX_SIZE];
-    const char * ext = CNWN_RESOURCE_TYPE_EXTENSION(resource_type);
-    int slen = 0;
-    for (int i = 0; key[i] != 0 && slen < sizeof(tmps) - 1 && i < 32; i++)
-        if (key[i] > 32)
-            tmps[slen++] = key[i];
-    if (ext != NULL && ext[0] != 0 && slen < sizeof(tmps) - 1) {
-        tmps[slen++] = '.';
-        for (int i = 0; ext[i] != 0 && slen < sizeof(tmps) - 1 && i < 3; i++)
-            if (ext[i] > 32)
-                tmps[slen++] = ext[i];
-    }
-    tmps[slen] = 0;
-    if (max_size > 0) {
-        slen = CNWN_MIN(slen, max_size - 1);
-        if (ret_filename != NULL) {
-            if (slen > 0)
-                memcpy(ret_filename, tmps, sizeof(char) * slen);
-            ret_filename[slen] = 0;
-        }
-    }
-    return slen;
-}
-
-int cnwn_resource_from_filename(const char * filename, cnwn_ResourceType * ret_resource_type, int max_size, char * ret_key)
-{
-    if (filename == NULL || filename[0] == 0) {
-        if (max_size > 0 && ret_key != NULL)
-            ret_key[0] = 0;
-        if (ret_resource_type != NULL)
-            *ret_resource_type = CNWN_RESOURCE_TYPE_NONE;
-        return 0;
-    }
-    int flen = strlen(filename);
-    char ext[4] = {0};
-    char base[CNWN_PATH_MAX_SIZE];
-    int offset = flen - 1;
-    while (offset >= 0 && filename[offset] != '.')
-        offset--;
-    int extlen = flen - offset - 1;
-    if (extlen > 0 && extlen <= 3)
-        memcpy(ext, filename + offset + 1, sizeof(char) * extlen);
-    for (int i = 0; ext[i] != 0 && i < 3; i++)
-        if (ext[i] >= 'A' && ext[i] <= 'Z')
-            ext[i] += 32;
-    int offset2 = offset - 1;
-    while (offset2 >= 0 && filename[offset2] != CNWN_PATH_SEPARATOR)
-        offset2--;    
-    int baselen = offset - offset2 - 1;
-    baselen = CNWN_MIN(baselen, sizeof(base) - 1);
-    int retlen = 0;
-    for (int i = 0; i < baselen; i++)
-        if (filename[offset2 + 1 + i] > 32)
-            base[retlen++] = filename[offset2 + 1 + i];
-    if (ret_resource_type != NULL)
-        *ret_resource_type = cnwn_resource_type_from_extension(ext);
-    retlen = CNWN_MIN(retlen, 32);
-    if (max_size > 0) {
-        retlen = CNWN_MIN(retlen, max_size - 1);
-        if (ret_key != NULL) {
-            if (retlen > 0) 
-                memcpy(ret_key, base, sizeof(char) * retlen);
-            ret_key[retlen] = 0;
-        }
-    }
-    return retlen;
-}
-
-
-int cnwn_resource_key_clean(const char * s, int max_size, char * ret_s)
+int cnwn_resource_type_and_key_to_filename(cnwn_ResourceType resource_type, const char * key, int max_size, char * ret_filename)
 {
     int offset = 0;
-    if (s != NULL) {
-        for (int i = 0; s[i] != 0 && (offset < max_size - 1 || (max_size <= 0 && ret_s == NULL)); i++) {
-            if ((s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= '0' && s[i] <= '9') || s[i] == '_') {
-                if (max_size > 0 && ret_s != NULL)
-                    ret_s[offset++] = s[i];
-                else
-                    offset++;
-            }
+    char tmps[CNWN_PATH_MAX_SIZE];
+    if (key != NULL) {
+        int len = strlen(key);
+        len = CNWN_MIN(len, CNWN_PATH_MAX_SIZE - offset - 1);
+        if (len > 0)
+            memcpy(tmps + offset, key, sizeof(char) * len);
+        offset += len;
+    }
+    const char * ext = CNWN_RESOURCE_TYPE_EXTENSION(resource_type);
+    if (ext != NULL && offset < CNWN_PATH_MAX_SIZE - 1) {
+        tmps[offset++] = '.';
+        int len = strlen(ext);
+        len = CNWN_MIN(len, CNWN_PATH_MAX_SIZE - offset - 1);
+        if (len > 0)
+            memcpy(tmps + offset, ext, sizeof(char) * len);
+        offset += len;
+    }
+    tmps[offset] = 0;
+    if (max_size > 0) {
+        offset = CNWN_MIN(offset, max_size - 1);
+        if (ret_filename != NULL) {
+            if (offset > 0)
+                memcpy(ret_filename, tmps, sizeof(char) * offset);
+            ret_filename[offset] = 0;
         }
     }
-    if (ret_s != NULL)
-        ret_s[offset] = 0;
     return offset;
+}
+
+int cnwn_resource_type_and_key_from_filename(const char * path, cnwn_ResourceType * ret_resource_type, int max_size, char * ret_key)
+{
+    char key[CNWN_PATH_MAX_SIZE], extension[CNWN_PATH_MAX_SIZE];
+    int len = cnwn_path_filename(path, sizeof(key), key);
+    cnwn_path_extension(key, sizeof(extension), extension);
+    for (int i = len - 1; i >= 0; i--)
+        if (key[i] == '.') {
+            key[i] = 0;
+            break;
+        }
+    if (ret_resource_type != NULL)
+        *ret_resource_type = cnwn_resource_type_from_extension(extension);
+    int copylen = len;
+    if (max_size > 0) {
+        copylen = CNWN_MIN(copylen, max_size - 1);
+        if (ret_key != NULL) {
+            if (copylen > 0)
+                memcpy(ret_key, key, sizeof(char) * copylen);
+            ret_key[copylen] = 0;
+        }
+    }
+    return copylen;
+}
+
+
+bool cnwn_resource_key_valid(const char * s)
+{
+    if (s == NULL || s[0] == 0)
+        return false;
+    for (int i = 0; s[i] != 0; i++) {
+        if (i >= 32)
+            return false;
+        if (!((s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= '0' && s[i] <= '9') || s[i] == '_'))
+            return false;
+    }
+    return true;
 }
