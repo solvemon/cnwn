@@ -129,15 +129,19 @@ cnwn_ResourceType cnwn_resource_type_from_extension(const char * path)
 {
     if (path == NULL || path[0] == 0)
         return CNWN_RESOURCE_TYPE_NONE;
-    char tmps[CNWN_PATH_MAX_SIZE];
-    int len = cnwn_path_extension(path, sizeof(tmps), tmps);
+    char tmps[CNWN_PATH_MAX_SIZE], clean[CNWN_PATH_MAX_SIZE];
+    int len = cnwn_path_extpart(tmps, sizeof(tmps), path);
     if (len == 0) 
-        len = cnwn_path_filename(path, sizeof(tmps), tmps);
+        len = cnwn_path_filepart(tmps, sizeof(tmps), path);
+    int cleanindex = 0;
     for (int i = 0; i < len; i++)
         if (tmps[i] >= 'A' && path[i] <= 'Z')
-            tmps[i] += 32;
+            clean[cleanindex++] = tmps[i] + 32;
+        else if (tmps[i] > 32)
+            clean[cleanindex++] = tmps[i];
+    clean[cleanindex] = 0;
     for (cnwn_ResourceType rt = CNWN_RESOURCE_TYPE_NONE + 1; rt < CNWN_MAX_RESOURCE_TYPE; rt++) {
-        if (strcmp(tmps, CNWN_RESOURCE_INFOS[rt].extension) == 0) 
+        if (strcmp(clean, CNWN_RESOURCE_INFOS[rt].extension) == 0) 
             return rt;
     }
     return CNWN_RESOURCE_TYPE_NONE;
@@ -178,25 +182,11 @@ int cnwn_resource_type_and_key_to_filename(cnwn_ResourceType resource_type, cons
 int cnwn_resource_type_and_key_from_filename(const char * path, cnwn_ResourceType * ret_resource_type, int max_size, char * ret_key)
 {
     char key[CNWN_PATH_MAX_SIZE], extension[CNWN_PATH_MAX_SIZE];
-    int len = cnwn_path_filename(path, sizeof(key), key);
-    cnwn_path_extension(key, sizeof(extension), extension);
-    for (int i = len - 1; i >= 0; i--)
-        if (key[i] == '.') {
-            key[i] = 0;
-            break;
-        }
+    cnwn_path_filepart(key, sizeof(key), path);
+    cnwn_path_extpart(extension, sizeof(extension), path);
     if (ret_resource_type != NULL)
         *ret_resource_type = cnwn_resource_type_from_extension(extension);
-    int copylen = len;
-    if (max_size > 0) {
-        copylen = CNWN_MIN(copylen, max_size - 1);
-        if (ret_key != NULL) {
-            if (copylen > 0)
-                memcpy(ret_key, key, sizeof(char) * copylen);
-            ret_key[copylen] = 0;
-        }
-    }
-    return copylen;
+    return cnwn_copy_string(ret_key, max_size, key, -1);
 }
 
 

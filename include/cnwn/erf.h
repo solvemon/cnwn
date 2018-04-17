@@ -8,12 +8,6 @@
 #include "cnwn/resource.h"
 
 /**
- * The maximum size of an ERF entry key (including zero terminator).
- * @note The largest key allowed for an ERF entry is 16 (V1.0) and 32 (V1.1) bytes.
- */
-#define CNWN_ERF_ENTRY_KEY_MAX_SIZE 33
-
-/**
  * Let's the handler know what mode to operate in.
  */
 enum cnwn_ERFHandlerMode_e {
@@ -33,6 +27,11 @@ enum cnwn_ERFHandlerMode_e {
      */
     CNWN_ERF_HANDLER_MODE_ARCHIVE,
 
+    /**
+     * Ask the handler what files it intends to extract/archive.
+     */
+    CNWN_ERF_HANDLER_MODE_QUERY,
+    
     /**
      * Max enum.
      */
@@ -60,19 +59,20 @@ typedef struct cnwn_ERFEntry_s cnwn_ERFEntry;
 typedef struct cnwn_ERFHandlers_s cnwn_ERFHandlers;
 
 /**
- * A handler for writing files from/to the ERF file.
+ * A handler for writing entries from/to the ERF file.
  * @param handlers The struct from which this handler was set.
  * @param mode The requested mode of operation for the handler, please respect CNWN_ERF_HANDLER_MODE_NONE.
- * @param path The path of the ERF file.
- * @param fd The file descriptor for the ERF file, ONLY READ/WRITE OPERATIONS PERMITTED (no seeking etc).
- * @param output_path The path of the output file.
- * @param output_fd The file descriptor for the output file.
- * @param header The header.
- * @param entry The entry.
- * @returns The number of written bytes or a negative value on error (MUST call cnwn_set_error()).
+ * @param version The version of the ERF file.
+ * @param fd The file descriptor for the ERF file, will be seek'ed to the right position before the handler is called: ONLY READ/WRITE OPERATIONS PERMITTED (no seeking etc).
+ * @param entry_path The path of the output/input file.
+ * @param resource_type The expected resource type of the entry to extract/archive.
+ * @param resource_size The size of the entry resource, should be ignored when CNWN_ERF_HANDLER_MODE_ARCHIVE.
+ * @param[out] ret_bytes Return the number of extracted/archived bytes, NULL to omit.
+ * @param[out] ret_files Return the paths of the extracted/archived files (must be manually freed using cnwn_free_strings()), NULL to omit.
+ * @returns A positive value if handled, zero if ignored or a negative value on error (in which case the implementation should use cnwn_set_error()).
  * @note If a handler returns a negative value further processing of handlers is discontinued by the calling function.
  */
-typedef int64_t (*cnwn_ERFHandler)(const cnwn_ERFHandlers * handlers, cnwn_ERFHandlerMode mode, const char * path, int fd, const char * output_path, int output_fd, const cnwn_ERFHeader * header, const cnwn_ERFEntry * entry);
+typedef int (*cnwn_ERFHandler)(const cnwn_ERFHandlers * handlers, cnwn_ERFHandlerMode mode, const cnwn_Version * version, int fd, const char * entry_path, cnwn_ResourceType resource_type, int64_t resource_size, int64_t * ret_bytes, char ** ret_files);
 
 /**
  * ERF header.
@@ -141,9 +141,9 @@ struct cnwn_ERFEntry_s {
     cnwn_ResourceType type;
 
     /**
-     * The key (name) of the resource.
+     * The key (name) of the resource, max 32 characters for V1.1 and 16 for V1.0.
      */
-    char key[CNWN_ERF_ENTRY_KEY_MAX_SIZE];
+    char key[33];
 
     /**
      * The offset to the key.
@@ -202,60 +202,35 @@ extern "C" {
 extern CNWN_PUBLIC const cnwn_ERFHandler CNWN_ERF_DEFAULT_HANDLER;
 
 /**
- * Read the header and entries from an ERF file.
- * @param fd The file to read from.
- * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
- * @param extended True for extended regular expression, false for POSIX.
+ * Read an ERF file header.
+ * @param f The ERF file to read from.
  * @param[out] ret_header Return the header, NULL to omit.
- * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
- * @param[out] ret_entries Write entries here, pass NULL to omit.
+ * @param[out] ret_entries Return an array of entries (must be freed using free()), pass NULL to omit.
  * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_read_contents(int fd, const char * regexps[], bool extended, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEntry ** ret_entries);
 
 /**
- * Read the header and entries from an ERF file.
+ * List the contents of an ERF file and print it to a stream.
  * @param path The path to the ERF file.
- * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
- * @param extended True for extended regular expression, false for POSIX.
- * @param[out] ret_header Return the header, NULL to omit.
- * @param max_entries The maximum number of entries to return, zero or a negative value while @p ret_entries is NULL will disable the limit.
- * @param[out] ret_entries Write entries here, pass NULL to omit.
- * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
+ * @param details True to print extra details for each entry in the ERF.
+ * @param output The output stream, NULL for no output.
+ * @returns The number of printed lines or negative on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_read_contents_path(const char * path, const char * regexps[], bool extended, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_list(const char * path, bool details, FILE * output);
 
 /**
- * Extract entries from an ERF file to an (optional) output path.
- * @param path The path to the input ERF file.
- * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
- * @param extended True for extended regular expression, false for POSIX.
- * @param output_dir The output directory (will be created if it doesn't exist), NULL or empty for current working directory.
- * @param handlers The handler setup, pass NULL to use CNWN_ERF_DEFAULT_HANDLER for everything.
- * @param[out] ret_header Return the header that was read from the ERF, NULL to omit.
- * @param[out] ret_num_entries The number of entries that were successfully written, NULL to omit.
- * @param[out] ret_entries Return the entries that were written (must be manually freed using free()), NULL to omit.
- * @returns The number of extracted entries or a negative value on error.
+ * List the contents of an ERF file and print it to a stream.
+ * @param path The path to the ERF file.
+ * @param details True to print extra details for each entry in the ERF.
+ * @param output The output stream, NULL for no output.
+ * @returns The number of printed lines or negative on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, const cnwn_ERFHandlers * handlers, cnwn_ERFHeader * ret_header, int * ret_num_entries, cnwn_ERFEntry ** ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_extract(const char * path, bool details, FILE * output);
 
-/**
- * Archive entries from an ERF file to an (optional) output path.
- * @param path The path to the output ERF file.
- * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
- * @param extended True for extended regular expression, false for POSIX.
- * @param input_dir The input directory or NULL or empty for current working directory.
- * @param handlers The handler setup, pass NULL to use CNWN_ERF_DEFAULT_HANDLER for everything.
- * @param[out] ret_header Return the header that was read from the ERF, NULL to omit.
- * @param[out] ret_num_entries The number of entries that were successfully written, NULL to omit.
- * @param[out] ret_entries Return the entries that were written (must be manually freed using free()), NULL to omit.
- * @returns The number of archived entries or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- */
-extern CNWN_PUBLIC int cnwn_erf_archive(const char * path, const char * regexps[], bool extended, const char * input_dir, const cnwn_ERFHandlers * handlers, cnwn_ERFHeader * ret_header, int * ret_num_entries, cnwn_ERFEntry ** ret_entries);
 
 #ifdef __cplusplus
 }

@@ -13,7 +13,7 @@ const char CNWN_PATH_ESCAPE = '\\';
 struct cnwn_File_s { int fd; };
 #endif
 
-cnwn_File * cnwn_open_r(const char * path)
+cnwn_File * cnwn_file_open_r(const char * path)
 {
 #ifdef SOME_PLATFORM
 #else
@@ -29,7 +29,7 @@ cnwn_File * cnwn_open_r(const char * path)
 #endif
 }
 
-cnwn_File * cnwn_open_w(const char * path)
+cnwn_File * cnwn_file_open_w(const char * path)
 {
 #ifdef SOME_PLATFORM
 #else
@@ -44,7 +44,7 @@ cnwn_File * cnwn_open_w(const char * path)
 #endif
 }
 
-cnwn_File * cnwn_open_rw(const char * path)
+cnwn_File * cnwn_file_open_rw(const char * path)
 {
 #ifdef SOME_PLATFORM
 #else
@@ -59,7 +59,7 @@ cnwn_File * cnwn_open_rw(const char * path)
 #endif
 }
 
-void cnwn_close(cnwn_File * f)
+void cnwn_file_close(cnwn_File * f)
 {
     if (f != NULL) {
 #ifdef SOME_PLATFORM
@@ -70,7 +70,7 @@ void cnwn_close(cnwn_File * f)
     }
 }
 
-int64_t cnwn_seek(cnwn_File * f, int64_t offset)
+int64_t cnwn_file_seek(cnwn_File * f, int64_t offset)
 {
     if (f == NULL) {
         cnwn_set_error("file is NULL");
@@ -87,7 +87,7 @@ int64_t cnwn_seek(cnwn_File * f, int64_t offset)
 #endif
 }
 
-int64_t cnwn_seek_delta(cnwn_File * f, int64_t delta_offset)
+int64_t cnwn_file_seek_delta(cnwn_File * f, int64_t delta_offset)
 {
     if (f == NULL) {
         cnwn_set_error("file is NULL");
@@ -104,7 +104,7 @@ int64_t cnwn_seek_delta(cnwn_File * f, int64_t delta_offset)
 #endif
 }
 
-int64_t cnwn_seek_start(cnwn_File * f)
+int64_t cnwn_file_seek_start(cnwn_File * f)
 {
     if (f == NULL) {
         cnwn_set_error("file is NULL");
@@ -121,7 +121,7 @@ int64_t cnwn_seek_start(cnwn_File * f)
 #endif
 }
 
-int64_t cnwn_seek_end(cnwn_File * f)
+int64_t cnwn_file_seek_end(cnwn_File * f)
 {
     if (f == NULL) {
         cnwn_set_error("file is NULL");
@@ -138,7 +138,7 @@ int64_t cnwn_seek_end(cnwn_File * f)
 #endif
 }
 
-int64_t cnwn_seek_cur(cnwn_File * f)
+int64_t cnwn_file_seek_cur(cnwn_File * f)
 {
     if (f == NULL) {
         cnwn_set_error("file is NULL");
@@ -518,6 +518,7 @@ int cnwn_path_basepart(char * s, int max_size, const char * path)
                     return cnwn_copy_string(s, max_size, path + i + 1, -1);
             }
         }
+        return cnwn_copy_string(s, max_size, path, -1);
     }
     if (s != NULL && max_size > 0)
         s[0] = 0;
@@ -531,9 +532,7 @@ int cnwn_path_filepart(char * s, int max_size, const char * path)
     for (int i = 0; tmps[i] != 0; i++) 
         if (tmps[i] == '.') 
             return cnwn_copy_string(s, max_size, tmps, i);
-    if (s != NULL && max_size > 0)
-        s[0] = 0;
-    return 0;
+    return cnwn_copy_string(s, max_size, tmps, -1);
 }
 
 int cnwn_path_extpart(char * s, int max_size, const char * path)

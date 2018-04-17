@@ -2,42 +2,7 @@
 
 int main(int argc, char * argv[])
 {
-    cnwn_ERFHeader header = {0};
-    cnwn_ERFEntry entries[1024] = {0};
-    int ret = cnwn_erf_read_contents_path(argc > 1 ? argv[1] : "../tests/test-01.mod", NULL, false, &header, 1024, entries);
-    printf("Returned: %d (%s)\n", ret, ret < 0 ? cnwn_get_error() : "");
-    printf("Header type: %s (%s)\n", CNWN_RESOURCE_TYPE_EXTENSION(header.type), header.type_str);
-    printf("Header version: %d.%d (%s)\n", header.version.major, header.version.minor, header.version_str);
-    printf("Localized strings: %u size=%u offset=%u\n", header.num_localized_strings, header.localized_strings_size, header.localized_strings_offset);
-    printf("Entries: %u keys_offset=%u resources_offset=%u\n", header.num_entries, header.keys_offset, header.resources_offset);
-    for (int i = 0; i < ret; i++) {
-        printf("  Entry: %s type=%s key_offset=%u resource_offset=%u resource_id=%u resource_size=%u\n",
-               entries[i].key,
-               CNWN_RESOURCE_TYPE_EXTENSION(entries[i].type),
-               entries[i].key_offset,
-               entries[i].resource_offset,
-               entries[i].resource_id,
-               entries[i].resource_size);
-        
-    }
-    cnwn_ERFEntry * done_entries;
-    int num_entries;
-    ret = cnwn_erf_extract(argc > 1 ? argv[1] : "../tests/test-01.mod", NULL, false, "tmp/entries", NULL, &header, &num_entries, &done_entries);
-    if (done_entries != NULL) {
-        for (int i = 0; i < num_entries; i++) {
-            char tmppath[CNWN_PATH_MAX_SIZE];
-            cnwn_resource_type_and_key_to_filename(done_entries[i].type, done_entries[i].key, sizeof(tmppath), tmppath);
-            cnwn_path_append("tmp/entries", tmppath, sizeof(tmppath), tmppath);
-            printf("Extracted %s (%u)\n", tmppath, done_entries[i].resource_size);
-        }
-        free(done_entries);
-    }
-    if (ret < 0)
-        fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
-    // ret = cnwn_erf_archive("output.mod", NULL, false, "tmp/entries", NULL, stdout, &num_files, &num_bytes);
-    // if (ret >= 0) {
-    //     printf("Handled %d entries, archived %d files and a total of %"PRId64" bytes\n", ret, num_files, num_bytes);
-    // } else
-    //     fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
+    if (cnwn_erf_list(argc > 1 ? argv[1] : "../tests/test-01.mod", true, stdout) <0)
+        printf("ERROR: %s\n", cnwn_get_error());
     return 0;
 }
