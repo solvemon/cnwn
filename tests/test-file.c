@@ -1,27 +1,23 @@
 #include "cnwn/file.h"
 
+void test_parts(const char * path) {
+    char dirs[CNWN_PATH_MAX_SIZE], base[CNWN_PATH_MAX_SIZE], fn[CNWN_PATH_MAX_SIZE], ext[CNWN_PATH_MAX_SIZE];
+    cnwn_path_dirpart(dirs, sizeof(dirs), path);
+    cnwn_path_basepart(base, sizeof(base), path);
+    cnwn_path_filepart(fn, sizeof(fn), path);
+    cnwn_path_extpart(ext, sizeof(ext), path);
+    printf("Path: %s => (%s) (%s) (%s) (%s)\n", path, dirs, base, fn, ext);
+}
+
+
 int main(int argc, char * argv[])
 {
-    const char * path = "/dir1//dir2/dir3/filename.txt";
-    char tmps[1024];
-    cnwn_path_filename(path, sizeof(tmps), tmps);
-    printf("Filename '%s'\n", tmps);
-    cnwn_path_directory(path, sizeof(tmps), tmps);
-    printf("Directory '%s'\n", tmps);
-    cnwn_path_extension(path, sizeof(tmps), tmps);
-    printf("Extension '%s'\n", tmps);
-    path = "this\\/is\\/escaped\\\\\\doubleslash";
-    cnwn_path_unescape(path, sizeof(tmps), tmps);
-    printf("Unescape '%s'\n", tmps);
-    if (cnwn_mkdirs("test1/test2/test3") < 0)
+    test_parts("/a/b/c/d.txt");
+    char ** ret = cnwn_listdir(NULL, true, NULL, false);
+    if (ret == NULL)
         printf("ERROR: %s\n", cnwn_get_error());
-    const char * regexps[] = {".*file", ".*make.*", NULL};
-    char ** dcontents = cnwn_directory_contents(NULL, regexps, false);
-    if (dcontents != NULL) {
-        for (char ** p = dcontents; *p != NULL; p++)
-            printf("In dir: %s\n", *p);
-    } else
-        printf("ERROR: %s\n", cnwn_get_error());
-    cnwn_free_strings(dcontents);
+    for (char ** p = ret; p != NULL && *p != NULL; p++)
+        printf("Content: %s\n", *p);
+    cnwn_free_strings(ret);
     return 0;
 }

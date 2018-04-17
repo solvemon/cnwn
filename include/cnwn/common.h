@@ -15,12 +15,12 @@
 #include <limits.h>
 #include <errno.h>
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <dirent.h>
-#include <regex.h>
+// #include <unistd.h>
+// #include <sys/types.h>
+// #include <sys/stat.h>
+// #include <fcntl.h>
+// #include <dirent.h>
+// #include <regex.h>
 
 /**
  * @cond
@@ -154,10 +154,28 @@ extern CNWN_PUBLIC uint32_t cnwn_swap32(uint32_t i);
 extern CNWN_PUBLIC uint16_t cnwn_swap16(uint16_t i);
 
 /**
- * Free an array of strings (and the array itself).
+ * Free a NULL terminated array of strings (and the array itself).
  * @param strings The string array.
  */
 extern CNWN_PUBLIC void cnwn_free_strings(char ** strings);
+
+/**
+ * Count the strings in a NULL terminated array.
+ * @param strings The string array.
+ * @return The number of counted strings.
+ */
+extern CNWN_PUBLIC int cnwn_count_strings(char ** strings);
+
+/**
+ * Copy a string to another.
+ * @param[out] s Copy to this string, pass NULL to get the required length.
+ * @param max_size The maximum size of the returned string, including the zero terminator.
+ * @param ss The source string.
+ * @param len The maximum number of chars to copy from @p ss, negative value will copy the entire string.
+ * @return The length of the returned string, excluding the zero terminator.
+ * @note The strings @p s and @p ss may overlap (because memmove() is used instead of memcpy()).
+ */
+extern CNWN_PUBLIC int cnwn_copy_string(char * s, int max_size, const char * ss, int len);
 
 #ifdef __cplusplus
 }

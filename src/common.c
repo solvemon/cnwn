@@ -51,3 +51,30 @@ void cnwn_free_strings(char ** strings)
         free(strings);
     }
 }
+
+int cnwn_count_strings(char ** strings)
+{
+    int ret = 0;
+    if (strings != NULL) 
+        for (char ** s = strings; *s != NULL; s++) 
+            ret++;
+    return ret;
+}
+
+int cnwn_copy_string(char * s, int max_size, const char * ss, int len)
+{
+    int sslen = ss != NULL ? strlen(ss) : 0;
+    if (len < 0)
+        len = sslen;
+    if (len > sslen)
+        len = sslen;
+    if (max_size > 0) {
+        len = CNWN_MIN(len, max_size - 1);
+        if (s != NULL) {
+            if (len > 0)
+                memmove(s, ss, sizeof(char) * len);
+            s[len] = 0;
+        }
+    }
+    return len;
+}

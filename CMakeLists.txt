@@ -35,9 +35,10 @@ endif()
 
 set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/regulexp.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/file.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
+  # ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
+  # ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   )
 
 
@@ -55,10 +56,10 @@ set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPU
 if(BUILD_TESTS)
   add_executable(test-file tests/test-file.c)
   target_link_libraries(test-file cnwn-shared)
-  add_executable(test-resource tests/test-resource.c)
-  target_link_libraries(test-resource cnwn-shared)
-  add_executable(test-erf tests/test-erf.c)
-  target_link_libraries(test-erf cnwn-shared)
+  # add_executable(test-resource tests/test-resource.c)
+  # target_link_libraries(test-resource cnwn-shared)
+  # add_executable(test-erf tests/test-erf.c)
+  # target_link_libraries(test-erf cnwn-shared)
 endif()
 
 install(TARGETS cnwn-shared DESTINATION "${CMAKE_INSTALL_LIBDIR}")

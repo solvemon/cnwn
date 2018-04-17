@@ -3,224 +3,578 @@
 const char CNWN_PATH_SEPARATOR = '/';
 const char CNWN_PATH_ESCAPE = '\\';
 
-#define FREE_REGEXP_THINGY if (compiled_regexps != NULL) { for (int reindex = 0; reindex < compiled_regexps_count; reindex++) regfree(compiled_regexps + reindex); free(compiled_regexps); }
+#ifdef SOME_PLATFORM
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <dirent.h>
+struct cnwn_File_s { int fd; };
+#endif
 
-int cnwn_open_read(const char * path)
+cnwn_File * cnwn_open_r(const char * path)
 {
+#ifdef SOME_PLATFORM
+#else
+    // POSIX
     int fd = open(path, O_RDONLY, 0);
     if (fd < 0) {
         cnwn_set_error("%s", strerror(errno));
-        return -1;
+        return NULL;
     }
-    return fd;
+    cnwn_File * ret = malloc(sizeof(cnwn_File));
+    ret->fd = fd;
+    return ret;
+#endif
 }
 
-int cnwn_open_write(const char * path)
+cnwn_File * cnwn_open_w(const char * path)
 {
+#ifdef SOME_PLATFORM
+#else
     int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
     if (fd < 0) {
         cnwn_set_error("%s", strerror(errno));
+        return NULL;
+    }
+    cnwn_File * ret = malloc(sizeof(cnwn_File));
+    ret->fd = fd;
+    return ret;
+#endif
+}
+
+cnwn_File * cnwn_open_rw(const char * path)
+{
+#ifdef SOME_PLATFORM
+#else
+    int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+    if (fd < 0) {
+        cnwn_set_error("%s", strerror(errno));
+        return NULL;
+    }
+    cnwn_File * ret = malloc(sizeof(cnwn_File));
+    ret->fd = fd;
+    return ret;
+#endif
+}
+
+void cnwn_close(cnwn_File * f)
+{
+    if (f != NULL) {
+#ifdef SOME_PLATFORM
+#else
+        close(f->fd);
+#endif
+        free(f);
+    }
+}
+
+int64_t cnwn_seek(cnwn_File * f, int64_t offset)
+{
+    if (f == NULL) {
+        cnwn_set_error("file is NULL");
         return -1;
     }
-    return fd;
-}
-
-void cnwn_close(int fd)
-{
-    close(fd);
-}
-
-int64_t cnwn_seek(int fd, int64_t offset)
-{
-    off_t ret = lseek(fd, offset, SEEK_SET);
+#ifdef SOME_PLATFORM
+#else
+    off_t ret = lseek(f->fd, offset, SEEK_SET);
     if (ret < 0) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
     }
     return ret;
+#endif
 }
 
-int64_t cnwn_seek_delta(int fd, int64_t delta_offset)
+int64_t cnwn_seek_delta(cnwn_File * f, int64_t delta_offset)
 {
-    off_t ret = lseek(fd, delta_offset, SEEK_CUR);
+    if (f == NULL) {
+        cnwn_set_error("file is NULL");
+        return -1;
+    }
+#ifdef SOME_PLATFORM
+#else
+    off_t ret = lseek(f->fd, delta_offset, SEEK_CUR);
     if (ret < 0) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
     }
     return ret;
+#endif
 }
 
-int64_t cnwn_seek_end(int fd)
+int64_t cnwn_seek_start(cnwn_File * f)
 {
-    off_t ret = lseek(fd, 0, SEEK_END);
+    if (f == NULL) {
+        cnwn_set_error("file is NULL");
+        return -1;
+    }
+#ifdef SOME_PLATFORM
+#else
+    off_t ret = lseek(f->fd, 0, SEEK_SET);
     if (ret < 0) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
     }
     return ret;
+#endif
 }
 
-int64_t cnwn_seek_cur(int fd)
+int64_t cnwn_seek_end(cnwn_File * f)
 {
-    off_t ret = lseek(fd, 0, SEEK_CUR);
+    if (f == NULL) {
+        cnwn_set_error("file is NULL");
+        return -1;
+    }
+#ifdef SOME_PLATFORM
+#else
+    off_t ret = lseek(f->fd, 0, SEEK_END);
     if (ret < 0) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
     }
     return ret;
+#endif
 }
 
-int64_t cnwn_read_uint32(int fd, uint32_t * ret_i)
+int64_t cnwn_seek_cur(cnwn_File * f)
 {
-    uint8_t buffer[4];
-    int64_t ret = read(fd, buffer, 4);
+    if (f == NULL) {
+        cnwn_set_error("file is NULL");
+        return -1;
+    }
+#ifdef SOME_PLATFORM
+#else
+    off_t ret = lseek(f->fd, 0, SEEK_CUR);
     if (ret < 0) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
     }
-    if (ret < 4) {
-        cnwn_set_error("unexpected EOF");
-        return -1;
-    }
-    if (ret_i != NULL)
-        *ret_i = cnwn_swap32(*((uint32_t *)buffer));
     return ret;
+#endif
 }
 
-
-int64_t cnwn_write_uint32(int fd, uint32_t i);
-
-int64_t cnwn_read_uint16(int fd, uint16_t * ret_i)
+int64_t cnwn_file_read(cnwn_File * f, int64_t size, uint8_t * ret_data)
 {
-    uint8_t buffer[2];
-    int64_t ret = read(fd, buffer, 2);
-    if (ret < 0) {
-        cnwn_set_error("%s", strerror(errno));
+    if (f == NULL) {
+        cnwn_set_error("file is NULL");
         return -1;
     }
-    if (ret < 2) {
-        cnwn_set_error("unexpected EOF");
-        return -1;
-    }
-    if (ret_i != NULL)
-        *ret_i = cnwn_swap16(*((uint16_t *)buffer));
-    return ret;
-}
-
-
-int64_t cnwn_write_uint16(int fd, uint16_t i);
-
-
-int64_t cnwn_read_bytes(int fd, int64_t size, uint8_t * ret_data)
-{
-    if (size > 0) {
-        if (ret_data != NULL) {
-            int64_t ret = read(fd, ret_data, size);
-            if (ret < 0) {
-                cnwn_set_error("%s", strerror(errno));
-                return -1;
-            }
-            return ret;
-        }
-        int64_t ret = 0;
-        uint8_t tmp[CNWN_READ_WRITE_BUFFER_SIZE];
-        for (int i = 0; i < size / CNWN_READ_WRITE_BUFFER_SIZE; i++) {
-            int64_t tret = read(fd, tmp, CNWN_READ_WRITE_BUFFER_SIZE);
-            if (tret < 0) {
-                cnwn_set_error("%s", strerror(errno));
-                return -1;
-            }
-            ret += tret;
-        }
-        if (size % CNWN_READ_WRITE_BUFFER_SIZE) {
-            int64_t tret = read(fd, tmp, size % CNWN_READ_WRITE_BUFFER_SIZE);
-            if (tret < 0) {
-                cnwn_set_error("%s", strerror(errno));
-                return -1;
-            }
-            ret += tret;
+    if (size <= 0)
+        return 0;
+#ifdef SOME_PLATFORM
+#else
+    if (ret_data != NULL) {
+        ssize_t ret = read(f->fd, ret_data, size);
+        if (ret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
         }
         return ret;
     }
+    int64_t ret = 0;
+    uint8_t buffer[CNWN_READ_WRITE_BUFFER_SIZE];
+    for (int i = 0; i < size / CNWN_READ_WRITE_BUFFER_SIZE; i++) {
+        ssize_t readret = read(f->fd, buffer, CNWN_READ_WRITE_BUFFER_SIZE);
+        if (readret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        ret += readret;
+    }
+    if (size % CNWN_READ_WRITE_BUFFER_SIZE) {
+        int readret = read(f->fd, buffer, size % CNWN_READ_WRITE_BUFFER_SIZE);
+        if (readret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        ret += readret;
+    }
+    return ret;
+#endif
+}
+
+int64_t cnwn_file_write(cnwn_File * f, int64_t size, const uint8_t * data)
+{
+    if (f == NULL) {
+        cnwn_set_error("file is NULL");
+        return -1;
+    }
+    if (size <= 0)
+        return 0;
+#ifdef SOME_PLATFORM
+#else
+    if (data != NULL) {
+        ssize_t ret = write(f->fd, data, size);
+        if (ret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        return ret;
+    }
+    int64_t ret = 0;
+    uint8_t buffer[CNWN_READ_WRITE_BUFFER_SIZE] = {0};
+    for (int i = 0; i < size / CNWN_READ_WRITE_BUFFER_SIZE; i++) {
+        ssize_t writeret = write(f->fd, buffer, CNWN_READ_WRITE_BUFFER_SIZE);
+        if (writeret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        ret += writeret;
+    }
+    if (size % CNWN_READ_WRITE_BUFFER_SIZE) {
+        int writeret = write(f->fd, buffer, size % CNWN_READ_WRITE_BUFFER_SIZE);
+        if (writeret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        ret += writeret;
+    }
+    return ret;
+#endif
+}
+
+int64_t cnwn_file_copy(cnwn_File * f, cnwn_File * output_f, int64_t size)
+{
+    if (f == NULL) {
+        cnwn_set_error("file is NULL");
+        return -1;
+    }
+    if (size <= 0)
+        return 0;
+#ifdef SOME_PLATFORM
+#else
+    int64_t ret = 0;
+    uint8_t buffer[CNWN_READ_WRITE_BUFFER_SIZE] = {0};
+    for (int i = 0; i < size / CNWN_READ_WRITE_BUFFER_SIZE; i++) {
+        ssize_t readret = write(f->fd, buffer, CNWN_READ_WRITE_BUFFER_SIZE);
+        if (readret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        ssize_t writeret = write(output_f->fd, buffer, CNWN_READ_WRITE_BUFFER_SIZE);
+        if (writeret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        ret += writeret;
+    }
+    if (size % CNWN_READ_WRITE_BUFFER_SIZE) {
+        int readret = read(f->fd, buffer, size % CNWN_READ_WRITE_BUFFER_SIZE);
+        if (readret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        int writeret = write(output_f->fd, buffer, size % CNWN_READ_WRITE_BUFFER_SIZE);
+        if (writeret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        ret += writeret;
+    }
+    return ret;
+#endif
+}
+
+int64_t cnwn_file_read_uint64(cnwn_File * f, uint64_t * ret_i)
+{
+    uint8_t data[8];
+    int64_t ret = cnwn_file_read(f, 8, data);
+    if (ret < 0)
+        return -1;
+    if (ret < 8) {
+        cnwn_set_error("only read %"PRId64" of 8 bytes", ret);
+        return -1;
+    }
+    if (ret_i != NULL)
+        *ret_i = *((uint64_t *)data);
+    return ret;
+}
+
+int64_t cnwn_file_write_uint64(cnwn_File * f, uint64_t i)
+{
+    uint8_t data[8];
+    *((uint64_t *)data) = i;
+    int64_t ret = cnwn_file_write(f, 8, data);
+    if (ret < 0)
+        return -1;
+    return ret;
+}
+
+int64_t cnwn_file_read_uint32(cnwn_File * f, uint32_t * ret_i)
+{
+    uint8_t data[4];
+    int64_t ret = cnwn_file_read(f, 4, data);
+    if (ret < 0)
+        return -1;
+    if (ret < 4) {
+        cnwn_set_error("only read %"PRId64" of 4 bytes", ret);
+        return -1;
+    }
+    if (ret_i != NULL)
+        *ret_i = *((uint32_t *)data);
+    return ret;
+}
+
+int64_t cnwn_file_write_uint32(cnwn_File * f, uint32_t i)
+{
+    uint8_t data[4];
+    *((uint32_t *)data) = i;
+    int64_t ret = cnwn_file_write(f, 4, data);
+    if (ret < 0)
+        return -1;
+    return ret;
+}
+
+int64_t cnwn_file_read_uint16(cnwn_File * f, uint16_t * ret_i)
+{
+    uint8_t data[2];
+    int64_t ret = cnwn_file_read(f, 2, data);
+    if (ret < 0)
+        return -1;
+    if (ret < 2) {
+        cnwn_set_error("only read %"PRId64" of 2 bytes", ret);
+        return -1;
+    }
+    if (ret_i != NULL)
+        *ret_i = *((uint16_t *)data);
+    return ret;
+}
+
+int64_t cnwn_file_write_uint16(cnwn_File * f, uint16_t i)
+{
+    uint8_t data[2];
+    *((uint16_t *)data) = i;
+    int64_t ret = cnwn_file_write(f, 2, data);
+    if (ret < 0)
+        return -1;
+    return ret;
+}
+
+int64_t cnwn_file_read_uint8(cnwn_File * f, uint8_t * ret_i)
+{
+    uint8_t data[1];
+    int64_t ret = cnwn_file_read(f, 1, data);
+    if (ret < 0)
+        return -1;
+    if (ret < 1) {
+        cnwn_set_error("only read %"PRId64" bytes", ret);
+        return -1;
+    }
+    if (ret_i != NULL)
+        *ret_i = *((uint8_t *)data);
+    return ret;
+}
+
+int64_t cnwn_file_write_uint8(cnwn_File * f, uint8_t i)
+{
+    uint8_t data[1];
+    *((uint8_t *)data) = i;
+    int64_t ret = cnwn_file_write(f, 1, data);
+    if (ret < 0)
+        return -1;
+    return ret;
+}
+
+int cnwn_path_unescape(char * s, int max_size, const char * path)
+{
+    char tmps[CNWN_PATH_MAX_SIZE];
+    int offset = 0;
+    if (path != NULL) {
+        for (int i = 0; path[i] != 0 && offset < sizeof(tmps) - 1; i++) {
+            if (path[i] != CNWN_PATH_ESCAPE || (path[i + 1] != CNWN_PATH_SEPARATOR && path[i + 1] == CNWN_PATH_ESCAPE)) 
+                tmps[offset++] = path[i];
+        }
+    }
+    tmps[offset] = 0;
+    return cnwn_copy_string(s, max_size, tmps, -1);
+}
+
+int cnwn_path_concat(char * s, int max_size, ...)
+{
+    int offset = 0;
+    char tmps[CNWN_PATH_MAX_SIZE];
+    va_list args;
+    va_start(args, max_size);
+    char * as;
+    while ((as = va_arg(args, char *)) != NULL && offset < sizeof(tmps) - 1) {
+        if (offset > 0 && offset < sizeof(tmps) - 1)
+            tmps[offset++] = CNWN_PATH_SEPARATOR;
+        int aslen = strlen(as);
+        aslen = CNWN_MINMAX(aslen, 0, sizeof(tmps) - offset - 1);
+        if (aslen > 0)
+            memcpy(tmps + offset, as, sizeof(char) * aslen);
+        offset += aslen;
+    }    
+    va_end(args);
+    tmps[offset] = 0;
+    return cnwn_copy_string(s, max_size, tmps, -1);
+}
+
+char ** cnwn_path_split(const char * path, int max_splits)
+{
+    if (path == NULL || path[0] == 0) {
+        char ** ret = malloc(sizeof(char *) * 2);
+        ret[0] = malloc(sizeof(char));
+        ret[0][0] = 0;
+        ret[1] = NULL;
+        return ret;
+    }
+    int count = 0;
+    for (int i = 0; path[i] != 0 && (count < max_splits || max_splits < 0); i++) {
+        if (path[i] == CNWN_PATH_SEPARATOR) {
+            bool escaped = false;
+            for (int j = i - 1; j >= 0 && path[j] == CNWN_PATH_ESCAPE; j--)
+                escaped = !escaped;
+            if (!escaped)
+                count++;
+        }
+    }
+    int offset = 0;
+    int last = 0;
+    char ** ret = malloc(sizeof(char *) * (count + 2));
+    int index = 0;
+    for (int i = 0; path[i] != 0 && index < count; i++) {
+        if (path[i] == CNWN_PATH_SEPARATOR) {
+            bool escaped = false;
+            for (int j = i - 1; j >= 0 && path[j] == CNWN_PATH_ESCAPE; j--)
+                escaped = !escaped;
+            if (!escaped) {
+                int slen = offset - last - 1;
+                ret[index] = malloc(sizeof(char) * (slen + 1));
+                if (slen > 0)
+                    memcpy(ret[index], path + i, sizeof(char) * slen);
+                ret[index][slen] = 0;
+                last = offset + 1;
+                index++;
+            }
+        }
+    }
+    ret[index] = 0;
+    return ret;
+}
+
+int cnwn_path_join(char * s, int max_size, char ** strings)
+{
+    int offset = 0;
+    if (strings != NULL) {
+        for (char ** p = strings; *p != NULL && offset < max_size - 1; p++) {
+            int plen = strlen(*p);
+            if (max_size > 0) {
+                plen = CNWN_MINMAX(plen, 0, max_size - offset - 1);
+                if (s != NULL) {
+                    if (plen > 0)
+                        memcpy(s + offset, *p, sizeof(char) * plen);
+                }
+            } 
+            offset += plen;
+            if (*(p + 1) != NULL) {
+                if (max_size > 0) {
+                    if (offset < max_size - 1) {
+                        if (s != NULL)
+                            s[offset] = CNWN_PATH_SEPARATOR;
+                        offset++;
+                    }
+                } else
+                    offset++;
+            }
+        }
+    }
+    if (s != NULL && max_size > 0)
+        s[offset] = 0;
+    return offset;
+}
+
+int cnwn_path_dirpart(char * s, int max_size, const char * path)
+{
+    if (path != NULL) {
+        int plen = strlen(path);
+        for (int i = plen - 1; i >= 0; i--) {
+            if (path[i] == CNWN_PATH_SEPARATOR) {
+                bool escaped = false;
+                for (int j = i - 1; j >= 0 && path[j] == CNWN_PATH_ESCAPE; j--)
+                    escaped = !escaped;
+                if (!escaped) 
+                    return cnwn_copy_string(s, max_size, path, i + 1);
+            }
+        }
+    }
+    if (s != NULL && max_size > 0)
+        s[0] = 0;
     return 0;
 }
 
-int64_t cnwn_write_bytes(int fd, int64_t size, const uint8_t * data)
+int cnwn_path_basepart(char * s, int max_size, const char * path)
 {
-    if (size > 0) {
-        if (data != NULL) {
-            int64_t ret = write(fd, data, size);
-            if (ret < 0) {
-                cnwn_set_error("%s", strerror(errno));
-                return -1;
+    if (path != NULL) {
+        int plen = strlen(path);
+        for (int i = plen - 1; i >= 0; i--) {
+            if (path[i] == CNWN_PATH_SEPARATOR) {
+                bool escaped = false;
+                for (int j = i - 1; j >= 0 && path[j] == CNWN_PATH_ESCAPE; j--)
+                    escaped = !escaped;
+                if (!escaped) 
+                    return cnwn_copy_string(s, max_size, path + i + 1, -1);
             }
-            return ret;
         }
-        int64_t ret = 0;
-        uint8_t tmp[CNWN_READ_WRITE_BUFFER_SIZE];
-        memset(tmp, 0, sizeof(tmp));
-        for (int i = 0; i < size / CNWN_READ_WRITE_BUFFER_SIZE; i++) {
-            int64_t tret = write(fd, tmp, CNWN_READ_WRITE_BUFFER_SIZE);
-            if (tret < 0) {
-                cnwn_set_error("%s", strerror(errno));
-                return -1;
-            }
-            ret += tret;
-        }
-        if (size % CNWN_READ_WRITE_BUFFER_SIZE) {
-            int64_t tret = write(fd, tmp, size % CNWN_READ_WRITE_BUFFER_SIZE);
-            if (tret < 0) {
-                cnwn_set_error("%s", strerror(errno));
-                return -1;
-            }
-            ret += tret;
-        }
-        return ret;
     }
+    if (s != NULL && max_size > 0)
+        s[0] = 0;
+    return 0;
+}
+
+int cnwn_path_filepart(char * s, int max_size, const char * path)
+{
+    char tmps[CNWN_PATH_MAX_SIZE];
+    cnwn_path_basepart(tmps, sizeof(tmps), path);
+    for (int i = 0; tmps[i] != 0; i++) 
+        if (tmps[i] == '.') 
+            return cnwn_copy_string(s, max_size, tmps, i);
+    if (s != NULL && max_size > 0)
+        s[0] = 0;
+    return 0;
+}
+
+int cnwn_path_extpart(char * s, int max_size, const char * path)
+{
+    char tmps[CNWN_PATH_MAX_SIZE];
+    cnwn_path_basepart(tmps, sizeof(tmps), path);
+    for (int i = 0; tmps[i] != 0; i++) 
+        if (tmps[i] == '.') 
+            return cnwn_copy_string(s, max_size, tmps + i + 1, -1);
+    if (s != NULL && max_size > 0)
+        s[0] = 0;
     return 0;
 }
 
 int cnwn_path_exists(const char * path)
 {
+    if (path == NULL || path[0] == 0) {
+        cnwn_set_error("invalid empty path");
+        return -1;
+    }
+#ifdef SOME_PLATFORM
+#else
     struct stat st = {0};
-    if (stat(path, &st) < 0) {
-        if (errno != ENOENT)
-            return 0;
+    if (stat(path, &st) < 0 && errno != ENOENT) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
     }
-    return 1;
+    if (S_ISDIR(st.st_mode) || S_ISREG(st.st_mode))
+        return 1;
+    return 0;
+#endif
 }
 
-int64_t cnwn_copy_bytes(int fd, int out_fd, int64_t size)
+int cnwn_path_isdir(const char * path)
 {
-    if (size <= 0)
-        return 0;
-    int64_t retbytes = 0;
-    uint8_t buffer[CNWN_READ_WRITE_BUFFER_SIZE];
-    for (int i = 0; i < size / CNWN_READ_WRITE_BUFFER_SIZE; i++) {
-        int ret = read(fd, buffer, CNWN_READ_WRITE_BUFFER_SIZE);
-        if (ret < 0) 
-            return -1;
-        ret = write(out_fd, buffer, ret);
-        if (ret < 0)
-            return -1;
-        retbytes += ret;
+    if (path == NULL || path[0] == 0) {
+        cnwn_set_error("invalid empty path");
+        return -1;
     }
-    if (size % CNWN_READ_WRITE_BUFFER_SIZE) {
-        int ret = read(fd, buffer, size % CNWN_READ_WRITE_BUFFER_SIZE);
-        if (ret < 0) 
-            return -1;
-        ret = write(out_fd, buffer, ret);
-        if (ret < 0)
-            return -1;
-        retbytes += ret;
-    }
-    return retbytes;
-}
-
-int cnwn_directory_exists(const char * path)
-{
+#ifdef SOME_PLATFORM
+#else
     struct stat st = {0};
     if (stat(path, &st) < 0 && errno != ENOENT) {
         cnwn_set_error("%s", strerror(errno));
@@ -229,10 +583,17 @@ int cnwn_directory_exists(const char * path)
     if (S_ISDIR(st.st_mode))
         return 1;
     return 0;
+#endif
 }
 
-int cnwn_file_exists(const char * path)
+int cnwn_path_isfile(const char * path)
 {
+    if (path == NULL || path[0] == 0) {
+        cnwn_set_error("invalid empty path");
+        return -1;
+    }
+#ifdef SOME_PLATFORM
+#else
     struct stat st = {0};
     if (stat(path, &st) < 0 && errno != ENOENT) {
         cnwn_set_error("%s", strerror(errno));
@@ -241,32 +602,17 @@ int cnwn_file_exists(const char * path)
     if (S_ISREG(st.st_mode))
         return 1;
     return 0;
-}
-
-static int cnwn_setup_path_mkdir(const char * path, int len, int max_size, char * ret_path)
-{
-    int plen = path != NULL ? strlen(path) : 0;
-    if (len < 0)
-        len = plen;
-    len = CNWN_MIN(len, plen);
-    len = CNWN_MIN(len, CNWN_PATH_MAX_SIZE - 1);
-    char tmps[CNWN_PATH_MAX_SIZE];
-    if (len > 0) {
-        memcpy(tmps, path, sizeof(char) * len);
-        if (max_size > 0)
-            len = CNWN_MIN(len, max_size - 1);
-        tmps[len] = 0;
-        cnwn_path_unescape(tmps, sizeof(tmps), tmps);
-        if (ret_path != NULL) {
-            memcpy(ret_path, tmps, sizeof(char) * len);
-            ret_path[len] = 0;
-        }
-    }
-    return len;
+#endif
 }
 
 static int cnwn_mkdir(const char * path) {
-    int exists = cnwn_directory_exists(path);
+    if (path == NULL || path[0] == 0) {
+        cnwn_set_error("invalid empty path");
+        return -1;
+    }
+#ifdef SOME_PLATFORM
+#else
+    int exists = cnwn_path_isdir(path);
     if (exists < 0) 
         return -1;
     if (exists == 0) {
@@ -278,267 +624,57 @@ static int cnwn_mkdir(const char * path) {
         return 1;
     }
     return 0;
+#endif
 }
 
 int cnwn_mkdirs(const char * path)
 {
+    if (path == NULL || path[0] == 0) {
+        cnwn_set_error("invalid empty path");
+        return -1;
+    }
     int ret = 0;
-    if (path != NULL && path[0] != 0) {
-        int i = 0;
-        while (path[i] != 0 && i < CNWN_PATH_MAX_SIZE - 1) {
-            if (path[i] == CNWN_PATH_SEPARATOR) {
-                bool escaped = false;
-                for (int j = i - 1; j > 0 && path[j] == CNWN_PATH_ESCAPE; j--)
-                    escaped = (escaped ? false : true);
-                if (!escaped) {
-                    char tmppath[CNWN_PATH_MAX_SIZE];
-                    cnwn_setup_path_mkdir(path, i, sizeof(tmppath), tmppath);
-                    int mret = cnwn_mkdir(tmppath);
-                    if (mret < 0) {
-                        cnwn_set_error("mkdir %s, %s\n", tmppath, strerror(errno));
-                        return -1;
-                    }
-                    ret += mret;
-                }
+    for (int i = 0; path[i] != 0; i++) {
+        if (path[i] == CNWN_PATH_SEPARATOR) {
+            bool escaped = false;
+            for (int j = i - 1; j >= 0 && path[j] == CNWN_PATH_ESCAPE; j--)
+                escaped = !escaped;
+            if (!escaped) {
+                char tmppath[CNWN_PATH_MAX_SIZE];
+                cnwn_copy_string(tmppath, sizeof(tmppath), path, i + 1);
+                int mkdirret = cnwn_mkdir(tmppath);
+                if (mkdirret < 0)
+                    return -1;
+                ret += mkdirret;
             }
-            i++;
         }
-        char tmppath[CNWN_PATH_MAX_SIZE];
-        cnwn_setup_path_mkdir(path, i, sizeof(tmppath), tmppath);
-        int mret = cnwn_mkdir(tmppath);
-        if (mret < 0) {
-            cnwn_set_error("mkdir %s, %s\n", tmppath, strerror(errno));
-            return -1;
-        }
-        ret += mret;
     }
     return ret;
 }
 
-int cnwn_path_unescape(const char * path, int max_size, char * ret_path)
+char ** cnwn_listdir(const char * path, bool full, const char * regexps[], bool extended)
 {
-    char tmps[CNWN_PATH_MAX_SIZE];
-    int offset = 0;
-    if (path != NULL) {
-        for (int i = 0; path[i] != 0 && offset < sizeof(tmps) - 1; i++) {
-            if (path[i] != CNWN_PATH_ESCAPE || (path[i + 1] != CNWN_PATH_SEPARATOR && path[i + 1] == CNWN_PATH_ESCAPE)) 
-                tmps[offset++] = path[i];
-        }
-    }
-    tmps[offset] = 0;
-    int copylen = strlen(tmps);
-    if (max_size > 0) {
-        copylen = CNWN_MIN(copylen, max_size - 1);
-        if (ret_path != NULL) {
-            if (copylen > 0)
-                memcpy(ret_path, tmps, sizeof(char) * copylen);
-            ret_path[copylen] = 0;
-        }
-    }
-    return copylen;
-}
-
-int cnwn_path_filename(const char * path, int max_size, char * ret_filename)
-{
-    char tmps[CNWN_PATH_MAX_SIZE];
-    tmps[0] = 0;
-    int len = path != NULL ? strlen(path) : 0;
-    if (len > 0) {
-        int offset = len - 1;
-        while (offset >= 0) {
-            if (path[offset] == CNWN_PATH_SEPARATOR) {
-                bool escaped = false;
-                for (int i = offset - 1; i > 0 && path[i] == CNWN_PATH_ESCAPE; i--)
-                    escaped = (escaped ? false : true);
-                if (!escaped) {
-                    offset++;
-                    break;
-                }
-            }
-            offset--;
-        }
-        offset = CNWN_MAX(0, offset);
-        int copylen = len - offset;
-        copylen = CNWN_MINMAX(copylen, 0, sizeof(tmps) - 1);
-        if (copylen > 0)
-            memcpy(tmps, path + offset, sizeof(char) * copylen);
-        tmps[copylen] = 0;
-    }
-    int copylen = strlen(tmps);
-    if (max_size > 0) {
-        copylen = CNWN_MIN(copylen, max_size - 1);
-        if (ret_filename != NULL) {
-            if (copylen > 0)
-                memcpy(ret_filename, tmps, sizeof(char) * copylen);
-            ret_filename[copylen] = 0;
-        }
-    }
-    return copylen;
-}
-
-int cnwn_path_directory(const char * path, int max_size, char * ret_directory)
-{
-    char tmps[CNWN_PATH_MAX_SIZE];
-    tmps[0] = 0;
-    int len = path != NULL ? strlen(path) : 0;
-    if (len > 0) {
-        int offset = len - 1;
-        while (offset >= 0) {
-            if (path[offset] == CNWN_PATH_SEPARATOR) {
-                bool escaped = false;
-                for (int i = offset - 1; i > 0 && path[i] == CNWN_PATH_ESCAPE; i--)
-                    escaped = (escaped ? false : true);
-                if (!escaped) {
-                    offset++;
-                    break;
-                }
-            }
-            offset--;
-        }
-        int copylen = offset;
-        copylen = CNWN_MINMAX(copylen, 0, sizeof(tmps) - 1);
-        if (copylen > 0)
-            memcpy(tmps, path, sizeof(char) * copylen);
-        tmps[copylen] = 0;
-    }
-    int copylen = strlen(tmps);
-    if (max_size > 0) {
-        copylen = CNWN_MIN(copylen, max_size - 1);
-        if (ret_directory != NULL) {
-            if (copylen > 0)
-                memcpy(ret_directory, tmps, sizeof(char) * copylen);
-            ret_directory[copylen] = 0;
-        }
-    }
-    return copylen;
-}
-
-int cnwn_path_extension(const char * path, int max_size, char * ret_extension)
-{
-    char tmps[CNWN_PATH_MAX_SIZE];
-    tmps[0] = 0;
-    int len = path != NULL ? strlen(path) : 0;
-    if (len > 0) {
-        int offset = len - 1;
-        while (offset >= 0 && path[offset] != '.') {
-            if (path[offset] == CNWN_PATH_SEPARATOR) {
-                bool escaped = false;
-                for (int i = offset - 1; i > 0 && path[i] == CNWN_PATH_ESCAPE; i--)
-                    escaped = (escaped ? false : true);
-                if (!escaped) {
-                    if (ret_extension != NULL && max_size > 0)
-                        ret_extension[0] = 0;
-                    return 0;
-                }
-            }
-            offset--;
-        }
-        if (offset > 0) {
-            int copylen = len - offset - 1;
-            copylen = CNWN_MINMAX(copylen, 0, sizeof(tmps) - 1);
-            if (copylen > 0)
-                memcpy(tmps, path + offset + 1, sizeof(char) * copylen);
-            tmps[copylen] = 0;
-        }
-    }
-    int copylen = strlen(tmps);
-    if (max_size > 0) {
-        copylen = CNWN_MIN(copylen, max_size - 1);
-        if (ret_extension != NULL) {
-            if (copylen > 0)
-                memcpy(ret_extension, tmps, sizeof(char) * copylen);
-            ret_extension[copylen] = 0;
-        }
-    }
-    return copylen;
-}
-
-int cnwn_path_concat(int num_paths, const char * paths[], int max_size, char * ret_path)
-{
-    char tmps[CNWN_PATH_MAX_SIZE];
-    int tmpsoffset = 0;
-    if (paths != NULL) {
-        for (int i = 0; i < num_paths && tmpsoffset < sizeof(tmps) - 1; i++) {
-            if (paths[i] != NULL) {
-                int plen = strlen(paths[i]);
-                plen = CNWN_MIN(plen, sizeof(tmps) - tmpsoffset - 1);
-                plen = CNWN_MAX(0, plen);
-                if (plen > 0)
-                    memcpy(tmps + tmpsoffset, paths[i], sizeof(char) * plen);
-                tmpsoffset += plen;
-                if (i < num_paths - 1 && tmpsoffset < sizeof(tmps) - 1)
-                    tmps[tmpsoffset++] = CNWN_PATH_SEPARATOR;
-            }
-        }
-    }
-    tmps[tmpsoffset] = 0;
-    int copylen = strlen(tmps);
-    if (max_size > 0) {
-        copylen = CNWN_MIN(copylen, max_size - 1);
-        if (ret_path != NULL) {
-            if (copylen > 0)
-                memcpy(ret_path, tmps, sizeof(char) * copylen);
-            ret_path[copylen] = 0;
-        }
-    }
-    return copylen;
-}
-
-int cnwn_path_append(const char * path, const char * append, int max_size, char * ret_path)
-{
-    const char * paths[2] = {path, append};
-    return cnwn_path_concat(2, paths, max_size, ret_path);
-}
-
-char ** cnwn_directory_contents(const char * directory, const char * regexps[], bool extended)
-{
-    if (directory == NULL || directory[0] == 0)
-        directory = "."; // FIXME: different on windows?
-
-    regex_t * compiled_regexps = NULL;
-    int compiled_regexps_count = 0;
-    if (regexps != NULL) {
-        while (regexps[compiled_regexps_count] != NULL)
-            compiled_regexps_count++;
-        compiled_regexps = malloc(sizeof(regex_t) * compiled_regexps_count);
-        int flags = REG_ICASE;
-        if (extended)
-            flags |= REG_EXTENDED;
-        for (int i = 0; i < compiled_regexps_count; i++) {
-            int rexret = regcomp(compiled_regexps + i, regexps[i], flags);
-            if (rexret != 0) {
-                char tmps[1024];
-                regerror(rexret, compiled_regexps + i, tmps, sizeof(tmps));
-                cnwn_set_error("regexp #%d is invalid, %s", i, tmps);
-                FREE_REGEXP_THINGY;
-                return NULL;
-            }
-        }
-    }
-    
-    char path[CNWN_PATH_MAX_SIZE];
+    if (path == NULL)
+        path = "."; // FIXME: different on windows maybe?
+    cnwn_RegexpArray regexp_array;
+    if (cnwn_regexp_array_init(&regexp_array, extended, regexps) < 0)
+        return NULL;
     DIR * dp;
     struct dirent * ep;
-    dp = opendir(directory);
+    dp = opendir(path);
     if (dp == NULL) {
         cnwn_set_error("%s", strerror(errno));
-        FREE_REGEXP_THINGY;
+        cnwn_regexp_array_deinit(&regexp_array);
         return NULL;
     }
     int count = 0;
     while ((ep = readdir(dp))) {
         if (ep->d_name != NULL && ep->d_name[0] != 0) {
-            cnwn_path_append(directory, ep->d_name, sizeof(path), path);
-            struct stat st = {0};
-            if (stat(path, &st) == 0 && S_ISREG(st.st_mode)) {
-                if (regexps != NULL) {
-                    for (int j = 0; j < compiled_regexps_count; j++) {
-                        if (regexec(compiled_regexps + j, ep->d_name, 0, NULL, 0) == 0) 
-                            count++;
-                    }
-                } else
-                    count++;
-            }
+            char tmps[CNWN_PATH_MAX_SIZE];
+            cnwn_path_concat(tmps, sizeof(tmps), path, ep->d_name, NULL);
+            if (cnwn_path_isfile(tmps) == 1
+                && cnwn_regexp_array_match_any(&regexp_array, ep->d_name))
+                count++;
         }
     }
     rewinddir(dp);
@@ -546,31 +682,18 @@ char ** cnwn_directory_contents(const char * directory, const char * regexps[], 
     int index = 0;
     while ((ep = readdir(dp)) && index < count) {
         if (ep->d_name != NULL && ep->d_name[0] != 0) {
-            cnwn_path_append(directory, ep->d_name, sizeof(path), path);
-            struct stat st = {0};
-            if (stat(path, &st) == 0 && S_ISREG(st.st_mode)) {
-                if (regexps != NULL) {
-                    for (int j = 0; j < compiled_regexps_count; j++) {
-                        if (regexec(compiled_regexps + j, ep->d_name, 0, NULL, 0) == 0) {
-                            int pathlen = strlen(path);
-                            ret[index] = malloc(sizeof(char) * (pathlen + 1));
-                            memcpy(ret[index], path, sizeof(char) * pathlen);
-                            ret[index][pathlen] = 0;
-                            index++;
-                        }
-                    }
-                } else {
-                    int pathlen = strlen(path);
-                    ret[index] = malloc(sizeof(char) * (pathlen + 1));
-                    memcpy(ret[index], path, sizeof(char) * pathlen);
-                    ret[index][pathlen] = 0;
-                    index++;
-                }
+            char tmps[CNWN_PATH_MAX_SIZE];
+            cnwn_path_concat(tmps, sizeof(tmps), path, ep->d_name, NULL);
+            if (cnwn_path_isfile(tmps) == 1
+                && cnwn_regexp_array_match_any(&regexp_array, ep->d_name)) {
+                int namelen = full ? strlen(tmps) : strlen(ep->d_name);
+                ret[index] = malloc(sizeof(char) * (namelen + 1));
+                cnwn_copy_string(ret[index], namelen + 1, (full ? tmps : ep->d_name), -1);
+                index++;
             }
         }
     }
-    closedir(dp);
     ret[index] = NULL;
-    FREE_REGEXP_THINGY;
+    closedir(dp);
     return ret;
 }
