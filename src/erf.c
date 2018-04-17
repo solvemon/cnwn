@@ -4,8 +4,20 @@
 #define FREE_REGEXP_THINGY if (compiled_regexps != NULL) { for (int reindex = 0; reindex < compiled_regexps_count; reindex++) regfree(compiled_regexps + reindex); free(compiled_regexps); }
 
 
-const cnwn_ERFExtractionHandler CNWN_ERF_EXTRACTION_HANDLER_BINARY_COPY = cnwn_erf_extraction_handler_binary_copy;
-const cnwn_ERFExtractionHandler CNWN_ERF_EXTRACTION_HANDLER_DRYRUN = cnwn_erf_extraction_handler_dryrun;
+static int64_t cnwn_erf_default_handler(const cnwn_ERFHandlers * handlers, cnwn_ERFHandlerMode mode, const char * path, int fd, const char * output_path, int output_fd, const cnwn_ERFHeader * header, const cnwn_ERFEntry * entry)
+{
+    if (mode == CNWN_ERF_HANDLER_MODE_EXTRACT) {
+        if (entry->resource_size > 0) 
+            return cnwn_copy_bytes(fd, output_fd, entry->resource_size);
+        return 0;
+    } else if (mode == CNWN_ERF_HANDLER_MODE_ARCHIVE) {
+        return 0;
+    }
+    cnwn_set_error("invalid mode (%d)", mode);
+    return -1;
+}
+
+const cnwn_ERFHandler CNWN_ERF_DEFAULT_HANDLER = cnwn_erf_default_handler;
 
 
 int cnwn_erf_read_contents(int fd, const char * regexps[], bool extended, cnwn_ERFHeader * ret_header, int max_entries, cnwn_ERFEntry * ret_entries)
@@ -231,7 +243,6 @@ int cnwn_erf_read_contents(int fd, const char * regexps[], bool extended, cnwn_E
         if (compiled_regexps != NULL) {
             char tmppath[CNWN_PATH_MAX_SIZE];
             cnwn_resource_type_and_key_to_filename(entries[i].type, entries[i].key, sizeof(tmppath), tmppath);
-            printf("* '%s'\n", tmppath);
             for (int j = 0; j < compiled_regexps_count; j++) {
                 if (regexec(compiled_regexps + j, tmppath, 0, NULL, 0) == 0) {
                     if (ret_entries != NULL)
@@ -263,7 +274,7 @@ int cnwn_erf_read_contents_path(const char * path, const char * regexps[], bool 
     return ret;
 }
 
-int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, bool verbose, bool force, bool exiterr, cnwn_ERFExtractionHandler * handler, int64_t * ret_bytes, int * ret_entries)
+int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, const cnwn_ERFHandlers * handlers, FILE * verbose_output, int * ret_files, int64_t * ret_bytes)
 {
     int fd = cnwn_open_read(path);
     if (fd < 0) {
@@ -275,6 +286,11 @@ int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, c
     if (num_entries <= 0) {
         cnwn_close(fd);
         return num_entries;
+    }
+    int seeky = cnwn_seek(fd, 0);
+    if (seeky < 0) {
+        cnwn_close(fd);
+        return -1;
     }
     cnwn_ERFEntry * entries = malloc(sizeof(cnwn_ERFEntry) * num_entries);
     int num_entries2 = cnwn_erf_read_contents(fd, regexps, extended, &header, num_entries, entries);
@@ -290,54 +306,64 @@ int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, c
         return -1;
     }
     if (output_dir != NULL && output_dir[0] != 0) {
-        if (!force && cnwn_directory_exists(output_dir) != 1) {
-            // Ask if we wanna create, otherwise quit.
-        }
         int mkd = cnwn_mkdirs(output_dir);
         if (mkd < 0) {
             cnwn_set_error("could not create output directory, %s", cnwn_get_error());
             cnwn_close(fd);
             free(entries);
             return -1;
-        }
+        } else if (mkd > 0)
+            printf("Created output path: %s\n", output_dir);
     }
+    int64_t num_bytes = 0;
+    int num_files = 0;
     int ret = 0;
-    for (int i = 0; i < num_entries; i++) {
-        char filename[CNWN_PATH_MAX_SIZE], tmppath[CNWN_PATH_MAX_SIZE];
-        cnwn_resource_type_and_key_to_filename(entries[i].type, entries[i].key, sizeof(filename), filename);
-        if (output_dir != NULL && output_dir[0] != 0)
-            snprintf(tmppath, sizeof(tmppath), "%s%c%s", output_dir, CNWN_PATH_SEPARATOR, filename);
-        else
-            snprintf(tmppath, sizeof(tmppath), "%s", filename);
-        // int seekret = cnwn_seek(fd, entries[i].resource_offset);
-        // if (seekret < 0) {
-        //     cnwn_set_error("could not seek entry #%d (%s)\n", i, cnwn_get_error());
-        //     cnwn_close(fd);
-        //     free(entries);
-        //     return -1;            
-        // }
-        // if (!force && cnwn_file_exists(tmppath) == 1) {
-        //     // Ask to overwrite.
-        // }
-        // int out_fd = cnwn_open_write(tmppath);
-        // if (out_fd < 0) {
-        //     cnwn_set_error("could open file for entry #%d (%s): %s\n", i, cnwn_get_error(), tmppath);
-        //     cnwn_close(fd);
-        //     free(entries);
-        //     return -1;
-        // }
-        // int64_t copyret = cnwn_copy_bytes(fd, out_fd, entries[i].resource_size);
-        // if (copyret < 0) {
-        //     cnwn_set_error("could not write to file for entry #%d (%s): %s\n", i, cnwn_get_error(), tmppath);
-        //     cnwn_close(fd);
-        //     free(entries);
-        //     cnwn_close(out_fd);
-        //     return -1;
-        // }
-        // cnwn_close(out_fd);
-        // ret++;
+    for (int i = 0; i < num_entries2; i++) {
+        if (CNWN_RESOUCE_TYPE_VALID(entries[i].type)) {
+            cnwn_ERFHandler handler = CNWN_ERF_DEFAULT_HANDLER;
+            if (handlers != NULL) {
+                if (handlers->type_handler[entries[i].type] != NULL)
+                    handler = handlers->type_handler[entries[i].type];
+                else if (handlers->handler != NULL)
+                    handler = handlers->handler;
+            }
+            char filename[CNWN_PATH_MAX_SIZE];
+            cnwn_resource_type_and_key_to_filename(entries[i].type, entries[i].key, sizeof(filename), filename);
+            if (filename[0] != 0) {
+                char output_path[CNWN_PATH_MAX_SIZE];
+                cnwn_path_append(output_dir, filename, sizeof(output_path), output_path);
+                int seek_ret = cnwn_seek(fd, entries[i].resource_offset);
+                if (seek_ret < 0) {
+                    cnwn_set_error("entry #%d seek %s: %s", i, cnwn_get_error(), output_path);
+                    ret = -1;
+                    break;
+                }
+                int output_fd = cnwn_open_write(output_path);
+                if (output_fd < 0) {
+                    cnwn_set_error("entry #%d output %s: %s", i, cnwn_get_error(), output_path);
+                    ret = -1;
+                    break;
+                }
+                int64_t handler_bytes = handler(handlers, CNWN_ERF_HANDLER_MODE_EXTRACT, path, fd, output_path, output_fd, &header, entries + i);
+                cnwn_close(output_fd);
+                if (handler_bytes < 0) {
+                    cnwn_set_error("entry #%d handler %s: %s", i, cnwn_get_error(), output_path);
+                    ret = -1;
+                    break;
+                }
+                if (verbose_output != NULL)
+                    fprintf(verbose_output, "Extracted %"PRId64" bytes: %s\n", handler_bytes, output_path);
+                num_bytes += handler_bytes;
+                num_files++;
+                ret++;
+            }
+        }
     }
     cnwn_close(fd);
     free(entries);
+    if (ret_bytes != NULL)
+        *ret_bytes = num_bytes;
+    if (ret_files != NULL)
+        *ret_files = num_files;
     return ret;
 }

@@ -14,30 +14,65 @@
 #define CNWN_ERF_ENTRY_KEY_MAX_SIZE 33
 
 /**
- * @see struct cnwn_ERFHeader_e
+ * Let's the handler know what mode to operate in.
+ */
+enum cnwn_ERFHandlerMode_e {
+    
+    /**
+     * Ask the handler to do nothing.
+     */
+    CNWN_ERF_HANDLER_MODE_NONE = 0,
+    
+    /**
+     * Ask the handler to extract an entry.
+     */
+    CNWN_ERF_HANDLER_MODE_EXTRACT,
+
+    /**
+     * Ask the handler to archive an entry.
+     */
+    CNWN_ERF_HANDLER_MODE_ARCHIVE,
+
+    /**
+     * Max enum.
+     */
+    CNWN_MAX_ERF_HANDLER_MODE
+};
+
+/**
+ * @see enum cnwn_ERFHandlerMode_e
+ */
+typedef enum cnwn_ERFHandlerMode_e cnwn_ERFHandlerMode;
+
+/**
+ * @see struct cnwn_ERFHeader_s
  */
 typedef struct cnwn_ERFHeader_s cnwn_ERFHeader;
 
 /**
- * @see struct cnwn_ERFEntry_e
+ * @see struct cnwn_ERFEntry_s
  */
 typedef struct cnwn_ERFEntry_s cnwn_ERFEntry;
 
 /**
- * Called for each entry that requires writing.
+ * @see struct cnwn_ERFHandlers_s
+ */
+typedef struct cnwn_ERFHandlers_s cnwn_ERFHandlers;
+
+/**
+ * A handler for writing files from/to the ERF file.
+ * @param handlers The struct from which this handler was set.
+ * @param mode The requested mode of operation for the handler, please respect CNWN_ERF_HANDLER_MODE_NONE.
  * @param path The path of the ERF file.
- * @param fd The file descriptor for the ERF file, handlers have to seek this fd to find the entry.
+ * @param fd The file descriptor for the ERF file, ONLY READ/WRITE OPERATIONS PERMITTED (no seeking etc).
+ * @param output_path The path of the output file.
+ * @param output_fd The file descriptor for the output file.
  * @param header The header.
  * @param entry The entry.
- * @param output_path An output path for the entry.
- * @param verbose True if the handler should report info to stdout (NOT stderr!).
- * @param force True to omit any questions about overwriting existing files.
- * @param[out] ret_bytes The implementation will return the number of written bytes, NULL should be acceptable to omit the return value.
- * @returns The implementation should return the number of written files or a negative number on error (plz set the error accordingly using cnwn_set_error() instead of printing to stderr).
- * @note It is acceptable for a handler to ignore an entry and simply return 0.
- * @note If a handler returns a negative value further processing of handlers will be discontinued.
+ * @returns The number of written bytes or a negative value on error (MUST call cnwn_set_error()).
+ * @note If a handler returns a negative value further processing of handlers is discontinued by the calling function.
  */
-typedef int (*cnwn_ERFExtractionHandler)(const char * path, int fd, const cnwn_ERFHeader * header, const cnwn_ERFEntry * entry, const char * output_path, bool verbose, bool force, int64_t * ret_bytes);
+typedef int64_t (*cnwn_ERFHandler)(const cnwn_ERFHandlers * handlers, cnwn_ERFHandlerMode mode, const char * path, int fd, const char * output_path, int output_fd, const cnwn_ERFHeader * header, const cnwn_ERFEntry * entry);
 
 /**
  * ERF header.
@@ -141,20 +176,30 @@ struct cnwn_ERFEntry_s {
     uint32_t resource_size;
 };
 
+/**
+ * Used to setup handlers for entries.
+ */
+struct cnwn_ERFHandlers_s {
+
+    /**
+     * A handler, can be NULL to use CNWN_ERF_DEFAULT_HANDLER.
+     */
+    cnwn_ERFHandler handler;
+    
+    /**
+     * Type specific handlers, can be NULL to use the general @ref handler.
+     */
+    cnwn_ERFHandler type_handler[CNWN_MAX_RESOURCE_TYPE];
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * A (default) handler that will simply extract the binary format of an entry and save it as a normal file.
+ * A (default) handler that will simply copy unmodified data as is.
  */
-extern CNWN_PUBLIC const cnwn_ERFExtractionHandler CNWN_ERF_EXTRACTION_HANDLER_BINARY_COPY;
-
-/**
- * A handler that prints to stdout (if verbose) and return values as if the files would have been copied.
- */
-extern CNWN_PUBLIC const cnwn_ERFExtractionHandler CNWN_ERF_EXTRACTION_HANDLER_DRYRUN;
+extern CNWN_PUBLIC const cnwn_ERFHandler CNWN_ERF_DEFAULT_HANDLER;
 
 /**
  * Read the header and entries from an ERF file.
@@ -188,17 +233,14 @@ extern CNWN_PUBLIC int cnwn_erf_read_contents_path(const char * path, const char
  * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
  * @param extended True for extended regular expression, false for POSIX.
  * @param output_dir The output directory (will be created if it doesn't exist), NULL or empty for current working directory.
- * @param verbose True to print info to stdout, false means no stdout.
- * @param force Don't ask for stdin input, assume YES for all questions.
- * @param exiterr True if the extraction should halt if a handler returns an error, false to simply report them to stderr and continue.
- * @param handler A handler that will be called for each entry, NULL will use @p ref CNWN_ERF_EXTRACTION_HANDLER_BINARY_COPY.
- * @param[out] ret_bytes The total number of written bytes, NULL to omit.
- * @param[out] ret_entries The total number of written files, NULL to omit.
- * @returns Zero on success or a negative value on error.
+ * @param handlers The handler setup, pass NULL to use CNWN_ERF_DEFAULT_HANDLER for everything.
+ * @param verbose_output A file stream that can be used to write verbose output to, can be NULL for no output.
+ * @param[out] ret_bytes The total number of extraced/archived bytes by the handlers, NULL to omit.
+ * @param[out] ret_bytes The total number of extraced/archived files by the handlers, NULL to omit.
+ * @returns The number of extracted/archived entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
- * @note If @p force is false this function may require input from stdin will hang there until it's received.
  */
-extern CNWN_PUBLIC int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, bool verbose, bool force, bool exiterr, cnwn_ERFExtractionHandler * handler, int64_t * ret_bytes, int * ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, const cnwn_ERFHandlers * handlers, FILE * verbose_output, int * ret_files, int64_t * ret_bytes);
 
 #ifdef __cplusplus
 }

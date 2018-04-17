@@ -52,10 +52,9 @@ extern CNWN_PUBLIC int cnwn_open_write(const char * path);
 /**
  * Close a file.
  * @param fd The file to close.
- * @return Zero on success or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_close(int fd);
+extern CNWN_PUBLIC void cnwn_close(int fd);
 
 /**
  * Seek a file descriptor.
@@ -226,6 +225,26 @@ extern CNWN_PUBLIC int cnwn_path_directory(const char * path, int max_size, char
  * @return The new length of the extension (excluding zero terminator).
  */
 extern CNWN_PUBLIC int cnwn_path_extension(const char * path, int max_size, char * ret_extension);
+
+/**
+ * Concatenate multiple paths.
+ * @param num_paths The number of paths to concatenate.
+ * @param paths The paths to concatenate, NULL or NULL for a path is specific.
+ * @param max_size The maximum size (including zero terminator) of the return string.
+ * @param[out] ret_path Return the concatenated path here, NULL to omit.
+ * @return The new length of the returned path (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_path_concat(int num_paths, const char * paths[], int max_size, char * ret_path);
+
+/**
+ * Append a path to another.
+ * @param path The path to append to, NULL is acceptable for no path.
+ * @param append The path to append.
+ * @param max_size The maximum size (including zero terminator) of the return string.
+ * @param[out] ret_path Return the concatenated path here, NULL to omit.
+ * @return The new length of the returned path (excluding zero terminator).
+ */
+int cnwn_path_append(const char * path, const char * append, int max_size, char * ret_path);
 
 #ifdef __cplusplus
 }

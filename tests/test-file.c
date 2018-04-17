@@ -13,5 +13,7 @@ int main(int argc, char * argv[])
     path = "this\\/is\\/escaped\\\\\\doubleslash";
     cnwn_path_unescape(path, sizeof(tmps), tmps);
     printf("Unescape '%s'\n", tmps);
+    if (cnwn_mkdirs("test1/test2/test3") < 0)
+        printf("ERROR: %s\n", cnwn_get_error());
     return 0;
 }

@@ -21,8 +21,12 @@ int main(int argc, char * argv[])
                entries[i].resource_size);
         
     }
-    // ret = cnwn_erf_extract(argc > 1 ? argv[1] : "../tests/test-01.mod", NULL, false, "tmp/entries", true, false);
-    // if (ret < 0)
-    //     fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
+    int num_files;
+    int64_t num_bytes;
+    ret = cnwn_erf_extract(argc > 1 ? argv[1] : "../tests/test-01.mod", NULL, false, "tmp/entries", NULL, stdout, &num_files, &num_bytes);
+    if (ret >= 0) {
+        printf("Handled %d entries, wrote %d files and a total of %"PRId64" bytes\n", ret, num_files, num_bytes);
+    } else
+        fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
     return 0;
 }

@@ -23,16 +23,10 @@ int cnwn_open_write(const char * path)
     return fd;
 }
 
-int cnwn_close(int fd)
+void cnwn_close(int fd)
 {
-    int ret = close(fd);
-    if (ret < 0) {
-        cnwn_set_error("%s", strerror(errno));
-        return -1;
-    }
-    return 0;
+    close(fd);
 }
-
 
 int64_t cnwn_seek(int fd, int64_t offset)
 {
@@ -226,9 +220,7 @@ int64_t cnwn_copy_bytes(int fd, int out_fd, int64_t size)
 int cnwn_directory_exists(const char * path)
 {
     struct stat st = {0};
-    if (stat(path, &st) < 0) {
-        if (errno != ENOENT)
-            return 0;
+    if (stat(path, &st) < 0 && errno != ENOENT) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
     }
@@ -240,9 +232,7 @@ int cnwn_directory_exists(const char * path)
 int cnwn_file_exists(const char * path)
 {
     struct stat st = {0};
-    if (stat(path, &st) < 0) {
-        if (errno != ENOENT)
-            return 0;
+    if (stat(path, &st) < 0 && errno != ENOENT) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
     }
@@ -277,7 +267,7 @@ static int cnwn_mkdir(const char * path) {
     int exists = cnwn_directory_exists(path);
     if (exists < 0) 
         return -1;
-    if (exists > 0) {
+    if (exists == 0) {
         int mkret = mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP);
         if (mkret < 0) {
             cnwn_set_error("%s\n", strerror(errno));
@@ -292,8 +282,8 @@ int cnwn_mkdirs(const char * path)
 {
     int ret = 0;
     if (path != NULL && path[0] != 0) {
-        int plen = 0;
-        for (int i = 0; path[i] != 0 && i < CNWN_PATH_MAX_SIZE - 1; i++) {
+        int i = 0;
+        while (path[i] != 0 && i < CNWN_PATH_MAX_SIZE - 1) {
             if (path[i] == CNWN_PATH_SEPARATOR) {
                 bool escaped = false;
                 for (int j = i - 1; j > 0 && path[j] == CNWN_PATH_ESCAPE; j--)
@@ -309,18 +299,16 @@ int cnwn_mkdirs(const char * path)
                     ret += mret;
                 }
             }
-            plen++;
+            i++;
         }
-        if (path[plen] != 0) {
-            char tmppath[CNWN_PATH_MAX_SIZE];
-            cnwn_setup_path_mkdir(path, plen, sizeof(tmppath), tmppath);
-            int mret = cnwn_mkdir(tmppath);
-            if (mret < 0) {
-                cnwn_set_error("mkdir %s, %s\n", tmppath, strerror(errno));
-                return -1;
-            }
-            ret += mret;
+        char tmppath[CNWN_PATH_MAX_SIZE];
+        cnwn_setup_path_mkdir(path, i, sizeof(tmppath), tmppath);
+        int mret = cnwn_mkdir(tmppath);
+        if (mret < 0) {
+            cnwn_set_error("mkdir %s, %s\n", tmppath, strerror(errno));
+            return -1;
         }
+        ret += mret;
     }
     return ret;
 }
@@ -461,4 +449,41 @@ int cnwn_path_extension(const char * path, int max_size, char * ret_extension)
         }
     }
     return copylen;
+}
+
+int cnwn_path_concat(int num_paths, const char * paths[], int max_size, char * ret_path)
+{
+    char tmps[CNWN_PATH_MAX_SIZE];
+    int tmpsoffset = 0;
+    if (paths != NULL) {
+        for (int i = 0; i < num_paths && tmpsoffset < sizeof(tmps) - 1; i++) {
+            if (paths[i] != NULL) {
+                int plen = strlen(paths[i]);
+                plen = CNWN_MIN(plen, sizeof(tmps) - tmpsoffset - 1);
+                plen = CNWN_MAX(0, plen);
+                if (plen > 0)
+                    memcpy(tmps + tmpsoffset, paths[i], sizeof(char) * plen);
+                tmpsoffset += plen;
+                if (i < num_paths - 1 && tmpsoffset < sizeof(tmps) - 1)
+                    tmps[tmpsoffset++] = CNWN_PATH_SEPARATOR;
+            }
+        }
+    }
+    tmps[tmpsoffset] = 0;
+    int copylen = strlen(tmps);
+    if (max_size > 0) {
+        copylen = CNWN_MIN(copylen, max_size - 1);
+        if (ret_path != NULL) {
+            if (copylen > 0)
+                memcpy(ret_path, tmps, sizeof(char) * copylen);
+            ret_path[copylen] = 0;
+        }
+    }
+    return copylen;
+}
+
+int cnwn_path_append(const char * path, const char * append, int max_size, char * ret_path)
+{
+    const char * paths[2] = {path, append};
+    return cnwn_path_concat(2, paths, max_size, ret_path);
 }
