@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <regex.h>
 
 /**
@@ -89,7 +90,7 @@
  */
 typedef struct cnwn_Version_s cnwn_Version;
 
-/***
+/**
  * Keep track of major/minor version.
  */
 struct cnwn_Version_s {
@@ -151,6 +152,12 @@ extern CNWN_PUBLIC uint32_t cnwn_swap32(uint32_t i);
  * @note On little endian systems (such as Intel) this function does nothing.
  */
 extern CNWN_PUBLIC uint16_t cnwn_swap16(uint16_t i);
+
+/**
+ * Free an array of strings (and the array itself).
+ * @param strings The string array.
+ */
+extern CNWN_PUBLIC void cnwn_free_strings(char ** strings);
 
 #ifdef __cplusplus
 }

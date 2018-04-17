@@ -42,3 +42,12 @@ uint16_t cnwn_swap16(uint16_t i)
     return i;
     #endif
 }
+
+void cnwn_free_strings(char ** strings)
+{
+    if (strings != NULL) {
+        for (char ** s = strings; *s != NULL; s++) 
+            free(*s);
+        free(strings);
+    }
+}

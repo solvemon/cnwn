@@ -229,18 +229,33 @@ extern CNWN_PUBLIC int cnwn_erf_read_contents_path(const char * path, const char
 
 /**
  * Extract entries from an ERF file to an (optional) output path.
- * @param path The path to the ERF file.
+ * @param path The path to the input ERF file.
  * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
  * @param extended True for extended regular expression, false for POSIX.
  * @param output_dir The output directory (will be created if it doesn't exist), NULL or empty for current working directory.
  * @param handlers The handler setup, pass NULL to use CNWN_ERF_DEFAULT_HANDLER for everything.
- * @param verbose_output A file stream that can be used to write verbose output to, can be NULL for no output.
- * @param[out] ret_bytes The total number of extraced/archived bytes by the handlers, NULL to omit.
- * @param[out] ret_bytes The total number of extraced/archived files by the handlers, NULL to omit.
- * @returns The number of extracted/archived entries or a negative value on error.
+ * @param[out] ret_header Return the header that was read from the ERF, NULL to omit.
+ * @param[out] ret_num_entries The number of entries that were successfully written, NULL to omit.
+ * @param[out] ret_entries Return the entries that were written (must be manually freed using free()), NULL to omit.
+ * @returns The number of extracted entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, const cnwn_ERFHandlers * handlers, FILE * verbose_output, int * ret_files, int64_t * ret_bytes);
+extern CNWN_PUBLIC int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, const cnwn_ERFHandlers * handlers, cnwn_ERFHeader * ret_header, int * ret_num_entries, cnwn_ERFEntry ** ret_entries);
+
+/**
+ * Archive entries from an ERF file to an (optional) output path.
+ * @param path The path to the output ERF file.
+ * @param regexps A NULL-sentineled array of regexps (OR'ed) to match, NULL to match all.
+ * @param extended True for extended regular expression, false for POSIX.
+ * @param input_dir The input directory or NULL or empty for current working directory.
+ * @param handlers The handler setup, pass NULL to use CNWN_ERF_DEFAULT_HANDLER for everything.
+ * @param[out] ret_header Return the header that was read from the ERF, NULL to omit.
+ * @param[out] ret_num_entries The number of entries that were successfully written, NULL to omit.
+ * @param[out] ret_entries Return the entries that were written (must be manually freed using free()), NULL to omit.
+ * @returns The number of archived entries or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_erf_archive(const char * path, const char * regexps[], bool extended, const char * input_dir, const cnwn_ERFHandlers * handlers, cnwn_ERFHeader * ret_header, int * ret_num_entries, cnwn_ERFEntry ** ret_entries);
 
 #ifdef __cplusplus
 }

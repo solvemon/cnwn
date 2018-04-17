@@ -221,7 +221,7 @@ extern CNWN_PUBLIC int cnwn_path_directory(const char * path, int max_size, char
  * Extract the extension portion from a path.
  * @param path The path to get the extension from.
  * @param max_size The maximum size (including zero terminator) of the return string.
- * @param[out] ret_filename Return the unescaped path here, pass NULL to omit and get the required length.
+ * @param[out] ret_extension Return the unescaped path here, pass NULL to omit and get the required length.
  * @return The new length of the extension (excluding zero terminator).
  */
 extern CNWN_PUBLIC int cnwn_path_extension(const char * path, int max_size, char * ret_extension);
@@ -244,7 +244,17 @@ extern CNWN_PUBLIC int cnwn_path_concat(int num_paths, const char * paths[], int
  * @param[out] ret_path Return the concatenated path here, NULL to omit.
  * @return The new length of the returned path (excluding zero terminator).
  */
-int cnwn_path_append(const char * path, const char * append, int max_size, char * ret_path);
+extern CNWN_PUBLIC int cnwn_path_append(const char * path, const char * append, int max_size, char * ret_path);
+
+/**
+ * Get filenames in a directory.
+ * @param directory The directory to get filenames from.
+ * @param A NULL terminated array of regular expression strings, pass NULL to match all.
+ * @param extended True if you want to use extended regexps.
+ * @return A newly allocated array of string pointers ending with a NULL pointer, must be freed manually or using cnwn_free_strings(), or NULL on error.
+ * @see cnwn_get_error() if this function returns NULL.
+ */
+extern CNWN_PUBLIC char ** cnwn_directory_contents(const char * directory, const char * regexps[], bool extended);
 
 #ifdef __cplusplus
 }

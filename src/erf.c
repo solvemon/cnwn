@@ -248,7 +248,7 @@ int cnwn_erf_read_contents(int fd, const char * regexps[], bool extended, cnwn_E
                     if (ret_entries != NULL)
                         ret_entries[retnum_entries] = entries[i];
                     retnum_entries++;
-                break;
+                    break;
                 }
             }
         } else {
@@ -274,11 +274,11 @@ int cnwn_erf_read_contents_path(const char * path, const char * regexps[], bool 
     return ret;
 }
 
-int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, const cnwn_ERFHandlers * handlers, FILE * verbose_output, int * ret_files, int64_t * ret_bytes)
+int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, const char * output_dir, const cnwn_ERFHandlers * handlers, cnwn_ERFHeader * ret_header, int * ret_num_entries, cnwn_ERFEntry ** ret_entries)
 {
     int fd = cnwn_open_read(path);
     if (fd < 0) {
-        cnwn_set_error("could not open file (%s): %s", strerror(errno), path);
+        cnwn_set_error("could not open file for reading (%s): %s", cnwn_get_error(), path);
         return -1;
     }
     cnwn_ERFHeader header = {0};
@@ -312,11 +312,9 @@ int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, c
             cnwn_close(fd);
             free(entries);
             return -1;
-        } else if (mkd > 0)
-            printf("Created output path: %s\n", output_dir);
+        }
     }
-    int64_t num_bytes = 0;
-    int num_files = 0;
+    int done_entries = 0;
     int ret = 0;
     for (int i = 0; i < num_entries2; i++) {
         if (CNWN_RESOUCE_TYPE_VALID(entries[i].type)) {
@@ -351,19 +349,56 @@ int cnwn_erf_extract(const char * path, const char * regexps[], bool extended, c
                     ret = -1;
                     break;
                 }
-                if (verbose_output != NULL)
-                    fprintf(verbose_output, "Extracted %"PRId64" bytes: %s\n", handler_bytes, output_path);
-                num_bytes += handler_bytes;
-                num_files++;
+                done_entries++;
                 ret++;
             }
         }
     }
     cnwn_close(fd);
-    free(entries);
-    if (ret_bytes != NULL)
-        *ret_bytes = num_bytes;
-    if (ret_files != NULL)
-        *ret_files = num_files;
+    if (ret_header != NULL)
+        *ret_header = header;
+    if (ret_num_entries != NULL)
+        *ret_num_entries = done_entries;
+    if (ret_entries != NULL)
+        *ret_entries = entries;
+    else
+        free(entries);
     return ret;
 }
+
+int cnwn_erf_archive(const char * path, const char * regexps[], bool extended, const char * input_dir, const cnwn_ERFHandlers * handlers, cnwn_ERFHeader * ret_header, int * ret_num_entries, cnwn_ERFEntry ** ret_entries)
+{
+    char ** dcontents = cnwn_directory_contents(input_dir, regexps, extended);
+    cnwn_ERFHeader header = {0};
+    cnwn_ERFEntry * entries = NULL;
+    int done_entries = 0;
+    int ret = 0;
+    if (dcontents != NULL) {
+        int file_count = 0;
+        for (char ** p = dcontents; *p != NULL; p++)
+            file_count++;
+        if (file_count > 0)
+            entries = malloc(sizeof(cnwn_ERFEntry) * file_count);
+        int fd = cnwn_open_write(path);
+        if (fd >= 0) {
+            cnwn_close(fd);
+        } else {
+            cnwn_set_error("could not open file for writing (%s): %s", cnwn_get_error(), path);
+            ret = -1;
+        }
+        cnwn_free_strings(dcontents);
+    } else {
+        cnwn_set_error("could not create directory (%s): %s", cnwn_get_error(), input_dir);
+        ret = -1;
+    }
+    if (ret_header != NULL)
+        *ret_header = header;
+    if (ret_num_entries != NULL)
+        *ret_num_entries = done_entries;
+    if (ret_entries != NULL)
+        *ret_entries = entries;
+    else if (entries != NULL)
+        free(entries);
+    return ret;
+}
+

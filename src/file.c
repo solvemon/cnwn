@@ -3,6 +3,8 @@
 const char CNWN_PATH_SEPARATOR = '/';
 const char CNWN_PATH_ESCAPE = '\\';
 
+#define FREE_REGEXP_THINGY if (compiled_regexps != NULL) { for (int reindex = 0; reindex < compiled_regexps_count; reindex++) regfree(compiled_regexps + reindex); free(compiled_regexps); }
+
 int cnwn_open_read(const char * path)
 {
     int fd = open(path, O_RDONLY, 0);
@@ -206,7 +208,7 @@ int64_t cnwn_copy_bytes(int fd, int out_fd, int64_t size)
         retbytes += ret;
     }
     if (size % CNWN_READ_WRITE_BUFFER_SIZE) {
-        int ret = read(fd, buffer, CNWN_READ_WRITE_BUFFER_SIZE);
+        int ret = read(fd, buffer, size % CNWN_READ_WRITE_BUFFER_SIZE);
         if (ret < 0) 
             return -1;
         ret = write(out_fd, buffer, ret);
@@ -486,4 +488,89 @@ int cnwn_path_append(const char * path, const char * append, int max_size, char 
 {
     const char * paths[2] = {path, append};
     return cnwn_path_concat(2, paths, max_size, ret_path);
+}
+
+char ** cnwn_directory_contents(const char * directory, const char * regexps[], bool extended)
+{
+    if (directory == NULL || directory[0] == 0)
+        directory = "."; // FIXME: different on windows?
+
+    regex_t * compiled_regexps = NULL;
+    int compiled_regexps_count = 0;
+    if (regexps != NULL) {
+        while (regexps[compiled_regexps_count] != NULL)
+            compiled_regexps_count++;
+        compiled_regexps = malloc(sizeof(regex_t) * compiled_regexps_count);
+        int flags = REG_ICASE;
+        if (extended)
+            flags |= REG_EXTENDED;
+        for (int i = 0; i < compiled_regexps_count; i++) {
+            int rexret = regcomp(compiled_regexps + i, regexps[i], flags);
+            if (rexret != 0) {
+                char tmps[1024];
+                regerror(rexret, compiled_regexps + i, tmps, sizeof(tmps));
+                cnwn_set_error("regexp #%d is invalid, %s", i, tmps);
+                FREE_REGEXP_THINGY;
+                return NULL;
+            }
+        }
+    }
+    
+    char path[CNWN_PATH_MAX_SIZE];
+    DIR * dp;
+    struct dirent * ep;
+    dp = opendir(directory);
+    if (dp == NULL) {
+        cnwn_set_error("%s", strerror(errno));
+        FREE_REGEXP_THINGY;
+        return NULL;
+    }
+    int count = 0;
+    while ((ep = readdir(dp))) {
+        if (ep->d_name != NULL && ep->d_name[0] != 0) {
+            cnwn_path_append(directory, ep->d_name, sizeof(path), path);
+            struct stat st = {0};
+            if (stat(path, &st) == 0 && S_ISREG(st.st_mode)) {
+                if (regexps != NULL) {
+                    for (int j = 0; j < compiled_regexps_count; j++) {
+                        if (regexec(compiled_regexps + j, ep->d_name, 0, NULL, 0) == 0) 
+                            count++;
+                    }
+                } else
+                    count++;
+            }
+        }
+    }
+    rewinddir(dp);
+    char ** ret = malloc(sizeof(char *) * (count + 1));
+    int index = 0;
+    while ((ep = readdir(dp)) && index < count) {
+        if (ep->d_name != NULL && ep->d_name[0] != 0) {
+            cnwn_path_append(directory, ep->d_name, sizeof(path), path);
+            struct stat st = {0};
+            if (stat(path, &st) == 0 && S_ISREG(st.st_mode)) {
+                if (regexps != NULL) {
+                    for (int j = 0; j < compiled_regexps_count; j++) {
+                        if (regexec(compiled_regexps + j, ep->d_name, 0, NULL, 0) == 0) {
+                            int pathlen = strlen(path);
+                            ret[index] = malloc(sizeof(char) * (pathlen + 1));
+                            memcpy(ret[index], path, sizeof(char) * pathlen);
+                            ret[index][pathlen] = 0;
+                            index++;
+                        }
+                    }
+                } else {
+                    int pathlen = strlen(path);
+                    ret[index] = malloc(sizeof(char) * (pathlen + 1));
+                    memcpy(ret[index], path, sizeof(char) * pathlen);
+                    ret[index][pathlen] = 0;
+                    index++;
+                }
+            }
+        }
+    }
+    closedir(dp);
+    ret[index] = NULL;
+    FREE_REGEXP_THINGY;
+    return ret;
 }

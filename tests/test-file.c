@@ -15,5 +15,13 @@ int main(int argc, char * argv[])
     printf("Unescape '%s'\n", tmps);
     if (cnwn_mkdirs("test1/test2/test3") < 0)
         printf("ERROR: %s\n", cnwn_get_error());
+    const char * regexps[] = {".*file", ".*make.*", NULL};
+    char ** dcontents = cnwn_directory_contents(NULL, regexps, false);
+    if (dcontents != NULL) {
+        for (char ** p = dcontents; *p != NULL; p++)
+            printf("In dir: %s\n", *p);
+    } else
+        printf("ERROR: %s\n", cnwn_get_error());
+    cnwn_free_strings(dcontents);
     return 0;
 }
