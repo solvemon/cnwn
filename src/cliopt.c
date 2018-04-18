@@ -38,14 +38,14 @@ int cnwn_cli_option_find(const cnwn_CliOption * options, const char * arg)
     if (options != NULL) {
         if (CNWN_CLI_OPTION_ARG_IS_SHORT(arg)) {
             for (int i = 0; !cnwn_string_isempty(options[i].skey) || !cnwn_string_isempty(options[i].lkey); i++)
-                if (!cnwn_string_isempty(options[i].skey) && strcmp(options[i].skey, arg + 1) == 0)
+                if (!cnwn_string_isempty(options[i].skey) && cnwn_string_cmp(options[i].skey, arg + 1) == 0)
                     return i;
         } else if (CNWN_CLI_OPTION_ARG_IS_LONG(arg)) {
             for (int i = 0; !cnwn_string_isempty(options[i].lkey) || !cnwn_string_isempty(options[i].lkey); i++) {
                 int nlen = 0;
                 while (arg[2 + nlen] != '=' && arg[2 + nlen] != 0)
                     nlen++;
-                if (!cnwn_string_isempty(options[i].lkey) && strncmp(options[i].lkey, arg + 2, nlen) == 0)
+                if (!cnwn_string_isempty(options[i].lkey) && cnwn_string_ncmp(options[i].lkey, arg + 2, nlen) == 0)
                     return i;
             }
         }

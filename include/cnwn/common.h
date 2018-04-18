@@ -200,6 +200,44 @@ extern CNWN_PUBLIC bool cnwn_string_isempty(const char * s);
  */
 extern CNWN_PUBLIC char * cnwn_string_dup(const char * s);
 
+/**
+ * Compare two strings.
+ * @param s The string to compare for.
+ * @param o The string to compare with.
+ * @returns -1 if @p s < @p o, 1 if @p s > @p o and 0 if @p s == @p s.
+ * @note NULL is considered less than an empty string.
+ */
+extern CNWN_PUBLIC int cnwn_string_cmp(const char * s, const char * o);
+
+/**
+ * Compare the start of two strings.
+ * @param s The string to compare for.
+ * @param o The string to compare with.
+ * @param n The number of chars to compare.
+ * @returns -1 if @p s < @p o, 1 if @p s > @p o and 0 if @p s == @p s.
+ * @note NULL is considered less than an empty string.
+ */
+extern CNWN_PUBLIC int cnwn_string_ncmp(const char * s, const char * o, int n);
+
+/**
+ * Compare two strings with case insensitive (ASCII only).
+ * @param s The string to compare for.
+ * @param o The string to compare with.
+ * @returns -1 if @p s < @p o, 1 if @p s > @p o and 0 if @p s == @p s.
+ * @note NULL is considered less than an empty string.
+ */
+extern CNWN_PUBLIC int cnwn_string_cmpicase(const char * s, const char * o);
+
+/**
+ * Compare the start of two strings with case insensitive (ASCII only).
+ * @param s The string to compare for.
+ * @param o The string to compare with.
+ * @param n The number of chars to compare.
+ * @returns -1 if @p s < @p o, 1 if @p s > @p o and 0 if @p s == @p s.
+ * @note NULL is considered less than an empty string.
+ */
+extern CNWN_PUBLIC int cnwn_string_ncmpicase(const char * s, const char * o, int n);
+
 #ifdef __cplusplus
 }
 #endif

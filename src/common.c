@@ -114,3 +114,82 @@ char * cnwn_string_dup(const char * s)
     }
     return NULL;
 }
+
+int cnwn_string_cmp(const char * s, const char * o)
+{
+    if (s == o)
+        return 0;
+    if (s == NULL && o != NULL)
+        return -1;
+    if (o == NULL && s != NULL)
+        return 1;
+    int offset = 0;
+    while (s[offset] != 0 && o[offset] != 0 && s[offset] == o[offset])
+        offset++;
+    if ((unsigned char)s[offset] < (unsigned char)o[offset])
+        return -1;
+    if ((unsigned char)s[offset] > (unsigned char)o[offset])
+        return 1;
+    return 0;
+}
+
+int cnwn_string_ncmp(const char * s, const char * o, int n)
+{
+    if (s == o)
+        return 0;
+    if (s == NULL && o != NULL)
+        return -1;
+    if (o == NULL && s != NULL)
+        return 1;
+    int offset = 0;
+    while (s[offset] != 0 && o[offset] != 0 && s[offset] == o[offset] && (n <= 0 || offset < n)) 
+        offset++;
+    if (offset < n) {
+        if ((unsigned char)s[offset] < (unsigned char)o[offset])
+            return -1;
+        if ((unsigned char)s[offset] > (unsigned char)o[offset])
+            return 1;
+    }
+    return 0;
+}
+
+int cnwn_string_cmpicase(const char * s, const char * o)
+{
+    if (s == o)
+        return 0;
+    if (s == NULL && o != NULL)
+        return -1;
+    if (o == NULL && s != NULL)
+        return 1;
+    int offset = 0;
+    while (s[offset] != 0 && o[offset] != 0
+           && (s[offset] >= 'A' && s[offset] <= 'Z' ? s[offset] + 32 : s[offset]) == (o[offset] >= 'A' && o[offset] <= 'Z' ? o[offset] + 32 : o[offset]))
+        offset++;
+    if ((unsigned char)s[offset] < (unsigned char)o[offset])
+        return -1;
+    if ((unsigned char)s[offset] > (unsigned char)o[offset])
+        return 1;
+    return 0;
+}
+
+int cnwn_string_ncmpicase(const char * s, const char * o, int n)
+{
+    if (s == o)
+        return 0;
+    if (s == NULL && o != NULL)
+        return -1;
+    if (o == NULL && s != NULL)
+        return 1;
+    int offset = 0;
+    while (s[offset] != 0 && o[offset] != 0
+           && (s[offset] >= 'A' && s[offset] <= 'Z' ? s[offset] + 32 : s[offset]) == (o[offset] >= 'A' && o[offset] <= 'Z' ? o[offset] + 32 : o[offset])
+           && (n <= 0 || offset < n)) 
+        offset++;
+    if (offset < n) {
+        if ((unsigned char)s[offset] < (unsigned char)o[offset])
+            return -1;
+        if ((unsigned char)s[offset] > (unsigned char)o[offset])
+            return 1;
+    }
+    return 0;
+}

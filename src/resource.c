@@ -141,7 +141,7 @@ cnwn_ResourceType cnwn_resource_type_from_extension(const char * path)
             clean[cleanindex++] = tmps[i];
     clean[cleanindex] = 0;
     for (cnwn_ResourceType rt = CNWN_RESOURCE_TYPE_NONE + 1; rt < CNWN_MAX_RESOURCE_TYPE; rt++) {
-        if (strcmp(clean, CNWN_RESOURCE_INFOS[rt].extension) == 0) 
+        if (cnwn_string_cmp(clean, CNWN_RESOURCE_INFOS[rt].extension) == 0) 
             return rt;
     }
     return CNWN_RESOURCE_TYPE_NONE;
