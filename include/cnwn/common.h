@@ -167,6 +167,15 @@ extern CNWN_PUBLIC void cnwn_free_strings(char ** strings);
 extern CNWN_PUBLIC int cnwn_count_strings(char ** strings);
 
 /**
+ * Append string from one string list to another.
+ * @param strings The string array to append for.
+ * @param other The (other) strings to append.
+ * @return The new string list.
+ * @note @p strings will be freed and a new array allocated and returned.
+ */
+extern CNWN_PUBLIC char ** cnwn_append_strings(char ** strings, char ** other);
+
+/**
  * Copy a string to another.
  * @param[out] s Copy to this string, pass NULL to get the required length.
  * @param max_size The maximum size of the returned string, including the zero terminator.
@@ -176,6 +185,20 @@ extern CNWN_PUBLIC int cnwn_count_strings(char ** strings);
  * @note The strings @p s and @p ss may overlap (because memmove() is used instead of memcpy()).
  */
 extern CNWN_PUBLIC int cnwn_copy_string(char * s, int max_size, const char * ss, int len);
+
+/**
+ * Check if a string is empty/blank (NULL counts as empty).
+ * @param s The string to check.
+ * @returns True if the string only contains controls, whitespace, has zero length or is NULL, false otherwise.
+ */
+extern CNWN_PUBLIC bool cnwn_string_isempty(const char * s);
+
+/**
+ * Duplicate a string.
+ * @param s The string to duplicate.
+ * @returns A new duplicate of @p s.
+ */
+extern CNWN_PUBLIC char * cnwn_string_dup(const char * s);
 
 #ifdef __cplusplus
 }

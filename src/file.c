@@ -696,3 +696,20 @@ char ** cnwn_listdir(const char * path, bool full, const char * regexps[], bool 
     closedir(dp);
     return ret;
 }
+
+int64_t cnwn_path_filesize(const char * path)
+{
+     if (path == NULL || path[0] == 0) {
+        cnwn_set_error("invalid empty path");
+        return -1;
+    }
+#ifdef SOME_PLATFORM
+#else
+     struct stat st; 
+     if (stat(path, &st) != 0) {
+         cnwn_set_error("%s", strerror(errno));
+         return -1;
+     }
+     return st.st_size;
+#endif
+}

@@ -11,31 +11,31 @@
  * Check whether or not an option is a short option (single dash).
  * @param arg The argument to check.
  **/
-#define CNWN_CLI_OPTION_IS_SHORT(arg) ((void *)(arg) != NULL && (arg)[0] == '-' && (arg)[1] != '-' && (arg)[1] != 0 && (arg)[2] == 0)
+#define CNWN_CLI_OPTION_ARG_IS_SHORT(arg) ((void *)(arg) != NULL && (arg)[0] == '-' && (arg)[1] != '-' && (arg)[1] != 0 && (arg)[2] == 0)
 
 /**
  * Check whether or not an option is a long option (double dash).
  * @param arg The argument to check.
  **/
-#define CNWN_CLI_OPTION_IS_LONG(arg) ((void *)(arg) != NULL && (arg)[0] == '-' && (arg)[1] == '-' && (arg)[2] != 0)
+#define CNWN_CLI_OPTION_ARG_IS_LONG(arg) ((void *)(arg) != NULL && (arg)[0] == '-' && (arg)[1] == '-'  && (arg)[2] != '=' && (arg)[2] != 0)
 
 /**
- * The option is recognized as a normal argument.
- * @note Returned by cnwn_parse_cli_option().
- */
-#define CNWN_CLI_OPTION_ARG -1
+ * Check whether or not an option is an option or regular argument.
+ * @param arg The argument to check.
+ **/
+#define CNWN_CLI_OPTION_ARG_IS_OPTION(arg) (CNWN_CLI_OPTION_ARG_IS_SHORT(arg) || CNWN_CLI_OPTION_ARG_IS_LONG(arg))
 
 /**
- * An invalid option was specified.
+ * The option is invalid.
  * @note Returned by cnwn_parse_cli_option().
  */
-#define CNWN_CLI_OPTION_INVALID -2
+#define CNWN_CLI_OPTION_INVALID -1
 
 /**
- * A valid option expected an argument, but none was found.
+ * The option is missing an argument.
  * @note Returned by cnwn_parse_cli_option().
  */
-#define CNWN_CLI_OPTION_INCOMPLETE -3
+#define CNWN_CLI_OPTION_MISSING -2
 
 /**
  * @see struct cnwn_CliOption_s
@@ -48,14 +48,19 @@ typedef struct cnwn_CliOption_s cnwn_CliOption;
 struct cnwn_CliOption_s {
 
     /**
-     * Option key.
+     * Option short key.
      */
-    const char * key;
+    const char * skey;
+
+    /**
+     * Option long key.
+     */
+    const char * lkey;
     
     /**
-     * True if the option requires an argument.
+     * What the argument to the option should be named, NULL for no argument.
      */
-    bool requires_argument;
+    const char * argname;
 
     /**
      * A help string.
@@ -68,28 +73,47 @@ extern "C" {
 #endif
 
 /**
- * Parse some cli options.
+ * Turn a cli option into a string.
+ * @param option The cli option.
+ * @param max_size The maximum size of the returned string including zero terminator.
+ * @returns The length of the returned string excluding zero terminator.
+ */
+extern CNWN_PUBLIC int cnwn_cli_option_to_string(const cnwn_CliOption * option, int max_size, char * ret_s);
+
+/**
+ * Find an option based on an argument.
  * @param options A list of available options, this list must be terminated by a zeroed struct sentinel.
  * @param arg The argument.
- * @param next The argument following @p arg or NULL if there are no more arguments.
- * @param[out] ret_arg Return an argument, either to an option (if the function returns >= 0, can be NULL if the option has no argument) or as a normal non-option argument if the function returns @ref CNWN_CLI_OPTION_ARG.
- * @returns A zero or possitive option index of a valid option or a negative value for non-options, see details for result codes.
- * @note To check whether you need to skip one argument in argv (for long options that return non-NULL @p ret_arg) use the CNWN_CLI_OPTION_IS_SHORT() macro.
- *
- * Result codes:
- * - >= 0 is a valid option index.
- * CNWN_CLI_OPTION_ARG to indicate a normal argument.
- * CNWN_CLI_OPTION_INVALID to indicate an invalid option.
- * CNWN_CLI_OPTION_INCOMPLETE to indicate a valid option with missing argument.
+ * @returns The index of the found option or -1 for no match.
  */
-extern CNWN_PUBLIC int cnwn_parse_cli_option(const cnwn_CliOption * options, const char * arg, const char * next, const char ** ret_arg);
+extern CNWN_PUBLIC int cnwn_cli_option_find(const cnwn_CliOption * options, const char * arg);
+
+/**
+ * Find an option based on an argument.
+ * @param options A list of available options, this list must be terminated by a zeroed struct sentinel.
+ * @param arg The argument.
+ * @returns The cli option or NULL for no match.
+ */
+extern CNWN_PUBLIC const cnwn_CliOption * cnwn_cli_option_get(const cnwn_CliOption * options, const char * arg);
+
+/**
+ * Find an option based on an argument.
+ * @param options A list of available options, this list must be terminated by a zeroed struct sentinel.
+ * @param argindex The index of the argument.
+ * @param argc The number of available arguments.
+ * @param argv The arguments.
+ * @param[out] ret_optindex Return the index of the parsed option or -1 if there was no match, pass NULL to omit.
+ * @param[out] ret_optarg Return the option's argument or NULL if no argument was found, pass NULL to omit.
+ * @returns The number of consumed argument, zero if there are no more arguments or a negative value for an invalid option. The negative return value can be matched with CNWN_CLI_OPTION_INVALID and CNWN_CLI_OPTION_MISSING for better detail on what went wrong.
+ */
+extern CNWN_PUBLIC int cnwn_cli_options_parse(const cnwn_CliOption * options, int argindex, int argc, char * argv[], int * ret_optindex, const char ** ret_optarg);
 
 /**
  * Print help text for options.
  * @param options A list of available options, this list must be terminated by a zeroed struct sentinel.
  * @param prefix Prefix every printed line with this string (NULL is OK).
  */
-extern CNWN_PUBLIC void cnwn_print_cli_options(const cnwn_CliOption * options, const char * prefix);
+extern CNWN_PUBLIC void cnwn_cli_options_print_help(const cnwn_CliOption * options, const char * prefix);
 
 #ifdef __cplusplus
 }

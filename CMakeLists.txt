@@ -39,6 +39,7 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/file.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/cliopt.c
   )
 
 
@@ -60,6 +61,8 @@ if(BUILD_TESTS)
   target_link_libraries(test-resource cnwn-shared)
   add_executable(test-erf tests/test-erf.c)
   target_link_libraries(test-erf cnwn-shared)
+  add_executable(test-cliopt tests/test-cliopt.c)
+  target_link_libraries(test-cliopt cnwn-shared)
 endif()
 
 install(TARGETS cnwn-shared DESTINATION "${CMAKE_INSTALL_LIBDIR}")

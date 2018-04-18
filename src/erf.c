@@ -1,19 +1,58 @@
 #include "cnwn/erf.h"
 
-// static int64_t cnwn_erf_default_handler(const cnwn_ERFHandlers * handlers, cnwn_ERFHandlerMode mode, const char * path, int fd, const char * output_path, int output_fd, const cnwn_ERFHeader * header, const cnwn_ERFEntry * entry)
-// {
-//     if (mode == CNWN_ERF_HANDLER_MODE_EXTRACT) {
-//         if (entry->resource_size > 0) 
-//             return cnwn_copy_bytes(fd, output_fd, entry->resource_size);
-//         return 0;
-//     } else if (mode == CNWN_ERF_HANDLER_MODE_ARCHIVE) {
-//         return 0;
-//     }
-//     cnwn_set_error("invalid mode (%d)", mode);
-//     return -1;
-// }
+int cnwn_erf_header_to_string(const cnwn_ERFHeader * header, bool detailed, int max_size, char * ret_s)
+{
+    char tmps[1024];
+    if (header != NULL) {
+        if (detailed)
+            snprintf(tmps, sizeof(tmps), "%s%s%s%s%s %d.%d %s%s%s %"PRId64" bytes",
+                     CNWN_RESOURCE_TYPE_EXTENSION(header->type),
+                     cnwn_string_isempty(CNWN_RESOURCE_TYPE_EXTENSION(header->type)) ? "" : " ",
+                     cnwn_string_isempty(header->type_str) ? "" : "(",
+                     header->type_str,
+                     cnwn_string_isempty(header->type_str) ? "" : ")",
+                     header->version.major,
+                     header->version.minor,
+                     cnwn_string_isempty(header->version_str) ? "" : "(",
+                     header->version_str,
+                     cnwn_string_isempty(header->version_str) ? "" : ")",
+                     header->filesize
+                     );
+        else
+            snprintf(tmps, sizeof(tmps), "%s%s%d.%d",
+                     CNWN_RESOURCE_TYPE_EXTENSION(header->type),
+                     cnwn_string_isempty(CNWN_RESOURCE_TYPE_EXTENSION(header->type)) ? "" : " ",
+                     header->version.major,
+                     header->version.minor
+                     );
+    } else
+        tmps[0] = 0;
+    return cnwn_copy_string(ret_s, max_size, tmps, -1);
+}
 
-// const cnwn_ERFHandler CNWN_ERF_DEFAULT_HANDLER = cnwn_erf_default_handler;
+int cnwn_erf_entry_to_string(const cnwn_ERFEntry * entry, bool detailed, int max_size, char * ret_s)
+{
+    char tmps[1024];
+    if (entry != NULL) {
+        char filename[CNWN_PATH_MAX_SIZE];
+        cnwn_resource_type_and_key_to_filename(entry->type, entry->key, sizeof(filename), filename);
+        if (detailed)
+            snprintf(tmps, sizeof(tmps), "%s%s%u bytes at 0x%x (erftype=%u, key %d at 0x%x, resource ID %u)",
+                     filename,
+                     cnwn_string_isempty(filename) ? "": ", ",
+                     entry->resource_size,
+                     entry->resource_offset,
+                     entry->erf_type,
+                     entry->index,
+                     entry->key_offset,
+                     entry->resource_id
+                     );
+        else
+            snprintf(tmps, sizeof(tmps), "%s, %u bytes", filename, entry->resource_size);
+    } else
+        tmps[0] = 0;
+    return cnwn_copy_string(ret_s, max_size, tmps, -1);
+}
 
 
 int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEntry ** ret_entries)
@@ -99,6 +138,21 @@ int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEnt
         cnwn_set_error("invalid resources offset %u", header.resources_offset);
         return -1;
     }
+    ret = cnwn_file_read(f, 128, header.rest);
+    if (ret < 0) {
+        cnwn_set_error("could not read the remainder of the header, %s", cnwn_get_error());
+        return -1;
+    }
+    ret = cnwn_file_seek_end(f);
+    if (ret < 0) {
+        cnwn_set_error("could not seek end, %s", cnwn_get_error());
+        return -1;
+    }
+    header.filesize = cnwn_file_seek_cur(f);
+    if (header.filesize < 0) {
+        cnwn_set_error("could not get current seek, %s", cnwn_get_error());
+        return -1;
+    }
     if (ret_entries == NULL) {
         if (ret_header != NULL)
             *ret_header = header;
@@ -116,6 +170,7 @@ int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEnt
         }
         int key_size = (header.version.minor > 0 ? 32 : 16);
         for (int i = 0; i < header.num_entries; i++) {
+            entries[i].index = i;
             entries[i].key_offset = header.keys_offset + i * (key_size + 8);
             ret = cnwn_file_read(f, key_size, data);
             if (ret < 0) {
@@ -193,39 +248,4 @@ int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEnt
     else
         free(entries);
     return header.num_entries;
-}
-
-int cnwn_erf_list(const char * path, bool details, FILE * output)
-{
-    cnwn_ERFHeader header = {0};
-    cnwn_ERFEntry * entries = NULL;
-    cnwn_File * f = cnwn_file_open_r(path);
-    if (f == NULL) {
-        cnwn_set_error("could not open ERF (%s): %s\n", cnwn_get_error(), path);
-        return -1;
-    }
-    int ret = cnwn_erf_read_header(f, &header, &entries);
-    if (ret < 0) {
-        cnwn_set_error("could not open ERF (%s): %s\n", cnwn_get_error(), path);
-        return -1;
-    }
-    cnwn_file_close(f);
-    if (details)
-        printf("ERF: %s (%s) %d.%d (%s)\n", CNWN_RESOURCE_TYPE_EXTENSION(header.type), header.type_str, header.version.major, header.version.minor, header.version_str);
-    int64_t totbytes = 0;
-    if (entries != NULL) {
-        for (int i = 0; i < ret; i++) {
-            char tmps[CNWN_PATH_MAX_SIZE];
-            cnwn_resource_type_and_key_to_filename(entries[i].type, entries[i].key, sizeof(tmps), tmps);
-            if (details)
-                printf("%s (%u bytes at offset %u)\n", tmps, entries[i].resource_size, entries[i].resource_offset);
-            else
-                printf("%s\n", tmps);
-            totbytes += entries[i].resource_size;
-        }
-        free(entries);
-    }
-    if (details)
-        printf("Total %"PRId64" bytes in %d entries.\n", totbytes, ret);
-    return ret + (details ? 2 : 0);
 }

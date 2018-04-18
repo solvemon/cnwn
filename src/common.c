@@ -61,6 +61,20 @@ int cnwn_count_strings(char ** strings)
     return ret;
 }
 
+char ** cnwn_append_strings(char ** strings, char ** other)
+{
+    int count1 = cnwn_count_strings(strings);
+    int count2 = cnwn_count_strings(other);
+    char ** ret = malloc(sizeof(char *) * (count1 + count2 + 1));
+    for (int i = 0; i < count1; i++)
+        ret[i] = cnwn_string_dup(strings[i]);
+    for (int i = 0; i < count2; i++)
+        ret[i + count1] = cnwn_string_dup(strings[i]);
+    ret[count1 + count2] = NULL;
+    free(strings);
+    return ret;
+}
+
 int cnwn_copy_string(char * s, int max_size, const char * ss, int len)
 {
     int sslen = ss != NULL ? strlen(ss) : 0;
@@ -77,4 +91,26 @@ int cnwn_copy_string(char * s, int max_size, const char * ss, int len)
         }
     }
     return len;
+}
+
+bool cnwn_string_isempty(const char * s)
+{
+    if (s != NULL)
+        for (int i = 0; s[i] != 0; i++)
+            if (s[i] > 32)
+                return false;
+    return true;
+}
+
+char * cnwn_string_dup(const char * s)
+{
+    if (s != NULL) {
+        int len = strlen(s);
+        char * ret = malloc(sizeof(char) * (len + 1));
+        if (len > 0)
+            memcpy(ret, s, sizeof(char) * len);
+        ret[len] = 0;
+        return ret;
+    }
+    return NULL;
 }

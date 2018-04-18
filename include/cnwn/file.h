@@ -329,12 +329,20 @@ extern CNWN_PUBLIC int cnwn_mkdirs(const char * path);
  * Get filenames in a directory.
  * @param path A path to the directory to get filenames from.
  * @param full True to use the full path for each file (path + filename), false to just use the filename.
- * @param A NULL terminated array of regular expression strings, pass NULL to match all.
+ * @param regexps A NULL terminated array of regular expression strings, pass NULL to match all.
  * @param extended True if you want to use extended regexps.
  * @return A newly allocated array of string pointers ending with a NULL pointer, must be freed manually or using cnwn_free_strings(), or NULL on error.
  * @see cnwn_get_error() if this function returns NULL.
  */
 extern CNWN_PUBLIC char ** cnwn_listdir(const char * path, bool full, const char * regexps[], bool extended);
+
+/**
+ * Get the size of a file at specified path.
+ * @param path The path of the file to get the size for.
+ * @returns The size (in bytes) or a negative value to indicate an error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_path_filesize(const char * path);
 
 #ifdef __cplusplus
 }

@@ -53,26 +53,30 @@ typedef struct cnwn_ERFHeader_s cnwn_ERFHeader;
  */
 typedef struct cnwn_ERFEntry_s cnwn_ERFEntry;
 
-/**
- * @see struct cnwn_ERFHandlers_s
- */
-typedef struct cnwn_ERFHandlers_s cnwn_ERFHandlers;
 
 /**
- * A handler for writing entries from/to the ERF file.
- * @param handlers The struct from which this handler was set.
- * @param mode The requested mode of operation for the handler, please respect CNWN_ERF_HANDLER_MODE_NONE.
- * @param version The version of the ERF file.
- * @param fd The file descriptor for the ERF file, will be seek'ed to the right position before the handler is called: ONLY READ/WRITE OPERATIONS PERMITTED (no seeking etc).
- * @param entry_path The path of the output/input file.
- * @param resource_type The expected resource type of the entry to extract/archive.
- * @param resource_size The size of the entry resource, should be ignored when CNWN_ERF_HANDLER_MODE_ARCHIVE.
- * @param[out] ret_bytes Return the number of extracted/archived bytes, NULL to omit.
- * @param[out] ret_files Return the paths of the extracted/archived files (must be manually freed using cnwn_free_strings()), NULL to omit.
- * @returns A positive value if handled, zero if ignored or a negative value on error (in which case the implementation should use cnwn_set_error()).
- * @note If a handler returns a negative value further processing of handlers is discontinued by the calling function.
+ * Extract an entry from an ERF file.
+ * @param input_f The file to read from.
+ * @param header The header of the ERF.
+ * @param resouce_type The type of entry to extract.
+ * @param resource_size The size of the resouce.
+ * @param output_f The file to write to.
+ * @returns The number of written bytes (to @p output_f) or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
  */
-typedef int (*cnwn_ERFHandler)(const cnwn_ERFHandlers * handlers, cnwn_ERFHandlerMode mode, const cnwn_Version * version, int fd, const char * entry_path, cnwn_ResourceType resource_type, int64_t resource_size, int64_t * ret_bytes, char ** ret_files);
+typedef int (*cnwn_ErfExtractEntry)(cnwn_File * input_f, const cnwn_ERFHeader * header, cnwn_ResourceType resource_type, int64_t resource_size, cnwn_File * output_f);
+
+/**
+ * Archive an entry to an ERF file.
+ * @param input_f The file to read from.
+ * @param header The header of the ERF.
+ * @param resouce_type The type of entry to extract.
+ * @param output_f The file to write to.
+ * @returns The number of written bytes (to @p f) or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+typedef int (*cnwn_ErfArchiveEntry)(cnwn_File * input_f, const cnwn_ERFHeader * header, cnwn_ResourceType resouce_type, cnwn_File * output_f);
+
 
 /**
  * ERF header.
@@ -98,6 +102,11 @@ struct cnwn_ERFHeader_s {
      * The version string as it was read from a file.
      */
     char version_str[5];
+
+    /**
+     * The size of the entire ERF file.
+     */
+    int64_t filesize;
     
     /**
      * The number of localized strings.
@@ -128,6 +137,11 @@ struct cnwn_ERFHeader_s {
      * The offset for the entry resources.
      */
     uint32_t resources_offset;
+    
+    /**
+     * The data of the rest of header.
+     */
+    uint8_t rest[128];
 };
 
 /**
@@ -174,22 +188,11 @@ struct cnwn_ERFEntry_s {
      * The size of the resource.
      */
     uint32_t resource_size;
-};
-
-/**
- * Used to setup handlers for entries.
- */
-struct cnwn_ERFHandlers_s {
 
     /**
-     * A handler, can be NULL to use CNWN_ERF_DEFAULT_HANDLER.
+     * At what position the entry was found in the ERF.
      */
-    cnwn_ERFHandler handler;
-    
-    /**
-     * Type specific handlers, can be NULL to use the general @ref handler.
-     */
-    cnwn_ERFHandler type_handler[CNWN_MAX_RESOURCE_TYPE];
+    int index;
 };
 
 #ifdef __cplusplus
@@ -197,9 +200,24 @@ extern "C" {
 #endif
 
 /**
- * A (default) handler that will simply copy unmodified data as is.
+ * Get a printable string version of an ERF header.
+ * @param header The ERF header.
+ * @param detailed True if you want more info, false for a compressed format.
+ * @param max_size The maximum size of the returned string (including zero terminator).
+ * @param[out] ret_s Return the string here, pass NULL to get the required length.
+ * @returns The length of the return string (excluding zero terminator).
  */
-extern CNWN_PUBLIC const cnwn_ERFHandler CNWN_ERF_DEFAULT_HANDLER;
+extern CNWN_PUBLIC int cnwn_erf_header_to_string(const cnwn_ERFHeader * header, bool detailed, int max_size, char * ret_s);
+
+/**
+ * Get a printable string version of an ERF entry.
+ * @param entry The ERF entry.
+ * @param detailed True if you want more info, false for a compressed format.
+ * @param max_size The maximum size of the returned string (including zero terminator).
+ * @param[out] ret_s Return the string here, pass NULL to get the required length.
+ * @returns The length of the return string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_erf_entry_to_string(const cnwn_ERFEntry * entry, bool detailed, int max_size, char * ret_s);
 
 /**
  * Read an ERF file header.
@@ -212,24 +230,27 @@ extern CNWN_PUBLIC const cnwn_ERFHandler CNWN_ERF_DEFAULT_HANDLER;
 extern CNWN_PUBLIC int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEntry ** ret_entries);
 
 /**
- * List the contents of an ERF file and print it to a stream.
- * @param path The path to the ERF file.
- * @param details True to print extra details for each entry in the ERF.
- * @param output The output stream, NULL for no output.
- * @returns The number of printed lines or negative on error.
+ * Default function to extract an entry from an ERF file just as it is (straight up copy data).
+ * @param input_f The file to read from.
+ * @param header The header of the ERF.
+ * @param resouce_type The type of entry to extract.
+ * @param resource_size The size of the resouce.
+ * @param output_f The file to write to.
+ * @returns The number of written bytes (to @p output_f) or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_list(const char * path, bool details, FILE * output);
+extern CNWN_PUBLIC int cnwn_erf_extract_entry(cnwn_File * input_f, const cnwn_ERFHeader * header, cnwn_ResourceType resource_type, int64_t resource_size, cnwn_File * output_f);
 
 /**
- * List the contents of an ERF file and print it to a stream.
- * @param path The path to the ERF file.
- * @param details True to print extra details for each entry in the ERF.
- * @param output The output stream, NULL for no output.
- * @returns The number of printed lines or negative on error.
+ * Default function to archive an entry from to an ERF file just as it is (straight up copy data).
+ * @param input_f The file to read from.
+ * @param header The header of the ERF.
+ * @param resouce_type The type of entry to extract.
+ * @param output_f The file to write to.
+ * @returns The number of written bytes (to @p f) or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_extract(const char * path, bool details, FILE * output);
+extern CNWN_PUBLIC int cnwn_erf_archive_entry(cnwn_File * input_f, const cnwn_ERFHeader * header, cnwn_ResourceType resouce_type, cnwn_File * output_f);
 
 
 #ifdef __cplusplus

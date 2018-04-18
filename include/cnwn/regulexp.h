@@ -66,6 +66,7 @@ extern CNWN_PUBLIC bool cnwn_regexp_match(const cnwn_Regexp * regexp, const char
 
 /**
  * Initialize an array of regular expressions.
+ * @param regexp_array The array struct to initialize.
  * @param extended True for extended regexps.
  * @param regexps The strings with regular expressions and terminated with a NULL string.
  * @returns The number of regexps in the intialized array or a negative value on error.
@@ -74,6 +75,7 @@ extern CNWN_PUBLIC int cnwn_regexp_array_init(cnwn_RegexpArray * regexp_array, b
 
 /**
  * Initialize an array of regular expressions.
+ * @param regexp_array The array struct to initialize.
  * @param extended True for extended regexps.
  * @returns The number of regexps in the intialized array or a negative value on error.
  * @note The variable arguments must be strings with regular expressions and terminated with a NULL argument.
