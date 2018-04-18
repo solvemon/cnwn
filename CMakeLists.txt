@@ -51,8 +51,8 @@ add_library(cnwn-static STATIC ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 # target_link_libraries(cnwn-static ${OPENSSL_LIBRARIES})
 
-# add_executable(cnwn-erf src/cnwn-erf.c)
-# target_link_libraries(cnwn-erf cnwn-static)
+add_executable(cnwn-erf src/cnwn-erf.c)
+target_link_libraries(cnwn-erf cnwn-static)
 
 if(BUILD_TESTS)
   add_executable(test-file tests/test-file.c)
