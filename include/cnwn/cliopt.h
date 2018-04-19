@@ -20,41 +20,6 @@
 #define CNWN_CLI_COLOR_GRAY CNWN_CLI_COLOR_GREY
 
 /**
- * Normal = none (reset)
- */
-#define CNWN_CLI_COLOR_NORMAL CNWN_CLI_COLOR_NONE
-
-/**
- * Emphasis = white (bright)
- */
-#define CNWN_CLI_COLOR_EMPHASIS CNWN_CLI_COLOR_WHITE
-
-/**
- * Alert = red.
- */
-#define CNWN_CLI_COLOR_ALERT CNWN_CLI_COLOR_RED
-
-/**
- * Number = cyan.
- */
-#define CNWN_CLI_COLOR_NUMBER CNWN_CLI_COLOR_CYAN
-
-/**
- * Path = magenta.
- */
-#define CNWN_CLI_COLOR_PATH CNWN_CLI_COLOR_MAGENTA
-
-/**
- * Entry = green.
- */
-#define CNWN_CLI_COLOR_ENTRY CNWN_CLI_COLOR_GREEN
-
-/**
- * Details = grey.
- */
-#define CNWN_CLI_COLOR_DETAILS CNWN_CLI_COLOR_GREY
-
-/**
  * Check whether or not an option is a short option (single dash).
  * @param arg The argument to check.
  **/
@@ -175,6 +140,11 @@ struct cnwn_CliOption_s {
      * A help string.
      */
     const char * help;
+
+    /**
+     * The option value, can be an enumeration, constant, etc.
+     */
+    int value;
 };
 
 #ifdef __cplusplus

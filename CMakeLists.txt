@@ -40,6 +40,7 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/cliopt.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf_util.c
   )
 
 
@@ -49,7 +50,6 @@ set_target_properties(cnwn-shared PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPU
 #add_dependencies(cnwn-shared)
 add_library(cnwn-static STATIC ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-# target_link_libraries(cnwn-static ${OPENSSL_LIBRARIES})
 
 add_executable(cnwn-erf src/cnwn-erf.c)
 target_link_libraries(cnwn-erf cnwn-static)

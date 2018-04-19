@@ -5,8 +5,8 @@
 const char * CNWN_CLI_COLORS[CNWN_MAX_CLI_COLOR] =
 {
     "\x1b[0m",
-    "\x1b[97m",
-    "\x1b[90m",
+    "\x1b[1m\x1b[97m",
+    "\x1b[37m",
     "\x1b[91m",
     "\x1b[92m",
     "\x1b[94m",
@@ -14,7 +14,6 @@ const char * CNWN_CLI_COLORS[CNWN_MAX_CLI_COLOR] =
     "\x1b[96m",
     "\x1b[95m"
 };
-
 
 int cnwn_cli_option_to_string(const cnwn_CliOption * option, int max_size, char * ret_s)
 {
@@ -37,11 +36,11 @@ int cnwn_cli_option_to_string(const cnwn_CliOption * option, int max_size, char 
                     offset += snprintf(tmps + offset, sizeof(tmps) - offset, "--%s", option->lkey);
             }
         }
-        while (offset < 20)
+        while (offset < 22)
             tmps[offset++] = ' ';
         if (offset < sizeof(tmps) - 1 && !cnwn_string_isempty(option->help)) {
             if (offset > 0) 
-                offset += snprintf(tmps + offset, sizeof(tmps) - offset, " : ");
+                offset += snprintf(tmps + offset, sizeof(tmps) - offset, " ");
             if (offset < sizeof(tmps) - 1) 
                 offset += snprintf(tmps + offset, sizeof(tmps) - offset, "%s", option->help);
         }

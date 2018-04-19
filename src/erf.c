@@ -72,7 +72,7 @@ int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEnt
         header.type_str[i] = data[i];
     header.type = cnwn_resource_type_from_extension(header.type_str);
     if (header.type <= CNWN_RESOURCE_TYPE_NONE || header.type >= CNWN_MAX_RESOURCE_TYPE) {
-        cnwn_set_error("invalid resource type '%s'", header.type_str);
+        cnwn_set_error("invalid ERF type '%s'", header.type_str);
         return -1;
     }
     ret = cnwn_file_read(f, 4, data);
