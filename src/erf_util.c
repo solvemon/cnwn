@@ -4,8 +4,8 @@ const cnwn_CliOption CNWN_ERF_UTIL_OPTIONS_GENERAL[] = {
     {"h", "help", NULL, "Show this help.", CNWN_ERF_UTIL_OPTION_HELP},
     {"V", "version", NULL, "Show the version.", CNWN_ERF_UTIL_OPTION_VERSION},
     {"v", "verbose", NULL, "Verbose prints.", CNWN_ERF_UTIL_OPTION_VERBOSE},
-    {"i", "ignore-errors", NULL, "Don't quit on errors.", CNWN_ERF_UTIL_OPTION_IGNORE_ERRORS},
-    {"c", "color", NULL, "Enable color output.", CNWN_ERF_UTIL_OPTION_COLOR},
+    {"i", NULL, NULL, "Don't quit on errors.", CNWN_ERF_UTIL_OPTION_IGNORE_ERRORS},
+    {"c", NULL, NULL, "Enable color output.", CNWN_ERF_UTIL_OPTION_COLOR},
     {0}
 };
 
@@ -14,33 +14,32 @@ const cnwn_CliOption CNWN_ERF_UTIL_OPTIONS_INFO[] = {
 };
 
 const cnwn_CliOption CNWN_ERF_UTIL_OPTIONS_LIST[] = {
-    {"e", "extreg", NULL, "Use extended regular expressions.", CNWN_ERF_UTIL_OPTION_EXTENDED_REGEXP},
+    {"e", NULL, NULL, "Use extended regular expressions.", CNWN_ERF_UTIL_OPTION_EXTENDED_REGEXP},
     {0}
 };
 
 const cnwn_CliOption CNWN_ERF_UTIL_OPTIONS_EXTRACT[] = {
-    {"e", "extreg", NULL, "Use extended regular expressions.", CNWN_ERF_UTIL_OPTION_EXTENDED_REGEXP},
-    {"f", "force", NULL, "Force overwrites.", CNWN_ERF_UTIL_OPTION_FORCE},
-    {"d", "output-dir", "path", "Specify an output directory.", CNWN_ERF_UTIL_OPTION_DIRECTORY},
-    {"x", "xml", NULL, "Use XML output when possible.", CNWN_ERF_UTIL_OPTION_XML},
+    {"e", NULL, NULL, "Use extended regular expressions.", CNWN_ERF_UTIL_OPTION_EXTENDED_REGEXP},
+    {"f", NULL, NULL, "Force overwrites.", CNWN_ERF_UTIL_OPTION_FORCE},
+    {"d", NULL, "path", "Specify an output directory.", CNWN_ERF_UTIL_OPTION_DIRECTORY},
+    {"x", NULL, NULL, "Use XML output when possible.", CNWN_ERF_UTIL_OPTION_XML},
     {0}
 };
 
 const cnwn_CliOption CNWN_ERF_UTIL_OPTIONS_CREATE[] = {
-    {"f", "force", NULL, "Force overwrites.", CNWN_ERF_UTIL_OPTION_FORCE},
-    {"s", "set-version", "version", "Specify an ERF version: \"1.0\" (default) or \"1.1\".", CNWN_ERF_UTIL_OPTION_VERSION},
+    {"f", NULL, NULL, "Force overwrites.", CNWN_ERF_UTIL_OPTION_FORCE},
+    {"s", NULL, "version", "Specify an ERF version: \"1.0\" (default) or \"1.1\".", CNWN_ERF_UTIL_OPTION_VERSION},
     {0}
 };
 
 const cnwn_CliOption CNWN_ERF_UTIL_OPTIONS_ADD[] = {
-    {"f", "force", NULL, "Force overwrites.", CNWN_ERF_UTIL_OPTION_FORCE},
-    {"T", "temporary-file", "path", "Specify a temporary file.", CNWN_ERF_UTIL_OPTION_TEMPORARY_FILE},
+    {"f", NULL, NULL, "Force overwrites.", CNWN_ERF_UTIL_OPTION_FORCE},
+    {"T", NULL, "path", "Specify a temporary file.", CNWN_ERF_UTIL_OPTION_TEMPORARY_FILE},
     {0}
 };
 
 const cnwn_CliOption CNWN_ERF_UTIL_OPTIONS_REMOVE[] = {
-    {"f", "force", NULL, "Force overwrites.", CNWN_ERF_UTIL_OPTION_FORCE},
-    {"T", "temporary-file", "path", "Specify a temporary file.", CNWN_ERF_UTIL_OPTION_TEMPORARY_FILE},
+    {"T", NULL, "path", "Specify a temporary file.", CNWN_ERF_UTIL_OPTION_TEMPORARY_FILE},
     {0}
 };
 

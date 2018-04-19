@@ -11,7 +11,7 @@ void print_version(const cnwn_ERFUtilOptions * options)
 
 void print_help(const cnwn_ERFUtilOptions * options, char command)
 {
-    printf("%scnwn-erf %s[general options] <ERF file> %s<list|extract|create|add> %s[command options] [command args]\n",
+    printf("%scnwn-erf %s[general options] <ERF file> %s<info|list|extract|create|add> %s[command options] [command args]\n",
            CNWN_COLORIZE_EMPHASIS(options->color),
            CNWN_COLORIZE_NORMAL(options->color),
            CNWN_COLORIZE_EMPHASIS(options->color),
@@ -23,51 +23,49 @@ void print_help(const cnwn_ERFUtilOptions * options, char command)
     printf("%s", CNWN_COLORIZE_NORMAL(options->color));
     cnwn_cli_options_print_help(CNWN_ERF_UTIL_OPTIONS_GENERAL, "  ");
     printf("\n");
-    printf("%scnwn-erf %s<ERF file> %slist|ls|l %s[options] [regexp filters ...]:\n",
-           CNWN_COLORIZE_EMPHASIS(options->color),
-           CNWN_COLORIZE_NORMAL(options->color),
+    printf("%s<info|i>\n",
+           CNWN_COLORIZE_EMPHASIS(options->color));
+    printf("  %sShow info about an ERF file.\n", CNWN_COLORIZE_DETAILS(options->color));
+    printf("\n");
+    printf("%s<list|ls|l> %s[options] [regexp filters ...]:\n",
            CNWN_COLORIZE_EMPHASIS(options->color),
            CNWN_COLORIZE_NORMAL(options->color));
+    printf("  %sList the contents of an ERF file.\n", CNWN_COLORIZE_DETAILS(options->color));
     printf("%s", CNWN_COLORIZE_NORMAL(options->color));
     cnwn_cli_options_print_help(CNWN_ERF_UTIL_OPTIONS_LIST, "  ");
     printf("\n");
-    printf("%scnwn-erf %s<ERF file> %sextract|e|x %s[options] [regexp filters ...]:\n",
-           CNWN_COLORIZE_EMPHASIS(options->color),
-           CNWN_COLORIZE_NORMAL(options->color),
+    printf("%s<extract|e|x> %s[options] [regexp filters ...]:\n",
            CNWN_COLORIZE_EMPHASIS(options->color),
            CNWN_COLORIZE_NORMAL(options->color));
+    printf("  %sExtract the contents of an ERF file.\n", CNWN_COLORIZE_DETAILS(options->color));
     printf("%s", CNWN_COLORIZE_NORMAL(options->color));
     cnwn_cli_options_print_help(CNWN_ERF_UTIL_OPTIONS_EXTRACT, "  ");
     printf("\n");
-    printf("%scnwn-erf %s<ERF file> %screate|c %s[options] [input files ...]:\n",
-           CNWN_COLORIZE_EMPHASIS(options->color),
-           CNWN_COLORIZE_NORMAL(options->color),
+    printf("%s<create|c> %s[options] [input files ...]:\n",
            CNWN_COLORIZE_EMPHASIS(options->color),
            CNWN_COLORIZE_NORMAL(options->color));
+    printf("  %sCreate a new ERF file from specified files.\n", CNWN_COLORIZE_DETAILS(options->color));
     printf("%s", CNWN_COLORIZE_NORMAL(options->color));
     cnwn_cli_options_print_help(CNWN_ERF_UTIL_OPTIONS_CREATE, "  ");
     printf("\n");
-    printf("%scnwn-erf %s<ERF file> %sadd|a %s[options] [regexp filters ...]:\n",
-           CNWN_COLORIZE_EMPHASIS(options->color),
-           CNWN_COLORIZE_NORMAL(options->color),
+    printf("%s<add|a> %s[options] [input files ...]:\n",
            CNWN_COLORIZE_EMPHASIS(options->color),
            CNWN_COLORIZE_NORMAL(options->color));
+    printf("  %sAdd specified files to an existing ERF.\n", CNWN_COLORIZE_DETAILS(options->color));
     printf("%s", CNWN_COLORIZE_NORMAL(options->color));
     cnwn_cli_options_print_help(CNWN_ERF_UTIL_OPTIONS_ADD, "  ");
     printf("\n");
-    printf("%scnwn-erf %s<ERF file> %sremove|r %s[options] [regexp filters ...]:\n",
-           CNWN_COLORIZE_EMPHASIS(options->color),
-           CNWN_COLORIZE_NORMAL(options->color),
+    printf("%s<remove|r> %s[options] [regexp filters ...]:\n",
            CNWN_COLORIZE_EMPHASIS(options->color),
            CNWN_COLORIZE_NORMAL(options->color));
+    printf("  %sRemove entries from an ERF file.\n", CNWN_COLORIZE_DETAILS(options->color));
     printf("%s", CNWN_COLORIZE_NORMAL(options->color));
     cnwn_cli_options_print_help(CNWN_ERF_UTIL_OPTIONS_REMOVE, "  ");
     printf("\n");
-    printf("%scnwn-erf %s<ERF file> %sdiff|d %s<other ERF file>\n",
-           CNWN_COLORIZE_EMPHASIS(options->color),
-           CNWN_COLORIZE_NORMAL(options->color),
+    printf("%s<diff|d> %s<other ERF file>\n",
            CNWN_COLORIZE_EMPHASIS(options->color),
            CNWN_COLORIZE_NORMAL(options->color));
+    printf("  %sReport on diff between two ERF files.\n", CNWN_COLORIZE_DETAILS(options->color));
     printf("\n");
 }
 
