@@ -70,6 +70,16 @@ extern CNWN_PUBLIC cnwn_File * cnwn_file_open_w(const char * path);
 extern CNWN_PUBLIC cnwn_File * cnwn_file_open_rw(const char * path);
 
 /**
+ * Open a file for reading and writing, DON'T truncate.
+ * @param path The path of the file to open.
+ * @return The file or NULL on error.
+ * @see cnwn_get_error() if this function returns NULL.
+ * @note If the file doesn't exist it will be created and if the file already exists it will be truncated.
+ * @note On POSIX file systems the file will have user and group rw flags set.
+ */
+extern CNWN_PUBLIC cnwn_File * cnwn_file_open_rw_notrunc(const char * path);
+
+/**
  * Close a file.
  * @param f The file to close.
  * @see cnwn_get_error() if this function returns a negative value.

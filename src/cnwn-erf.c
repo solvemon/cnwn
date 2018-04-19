@@ -12,7 +12,6 @@ typedef struct {
     bool verbose;
     bool extended;
     bool no_quit;
-    bool recurse;
     bool no_color;
     bool force;
     bool info;
@@ -27,7 +26,6 @@ const cnwn_CliOption CNWN_ERF_OPTIONS_GENERAL[] = {
     {"v", "verbose", NULL, "Verbose output."},
     {"e", "extended", NULL, "Use extended regular expressions."},
     {"q", "no-quit", NULL, "Don't quit on errors."},
-    {"r", "recurse", NULL, "Recurse into sub-ERF/directory."},
     {"c", "no-color", NULL, "Disable color output for stdout."},
     {0}
 };
@@ -39,8 +37,8 @@ const cnwn_CliOption CNWN_ERF_OPTIONS_LIST[] = {
 
 const cnwn_CliOption CNWN_ERF_OPTIONS_EXTRACT[] = {
     {"f", "force", NULL, "Force overwrites."},
-    {"x", "disable-xml", NULL, "Disable all XML conversions."},
     {"d", "output-dir", "path", "Specify an output directory."},
+    {"x", "disable-xml", NULL, "Disable all XML conversions."},
     {0}
 };
 
@@ -56,6 +54,14 @@ const cnwn_CliOption CNWN_ERF_OPTIONS_ADD[] = {
     {"d", "input-dir", "path", "Specify an input directory."},
     {0}
 };
+
+////////////////////////////////////////////////////////////////
+//
+//
+// Help and arguments.
+//
+//
+////////////////////////////////////////////////////////////////
 
 void print_help(const cnwn_CliOption * options, bool verbose)
 {
@@ -129,8 +135,6 @@ int parse_arguments(int argc, char * argv[], cnwn_ERFOptions * ret_parsed_option
                 else if (optindex == 4) 
                     parsed_options.no_quit = true;
                 else if (optindex == 5) 
-                    parsed_options.recurse = true;
-                else if (optindex == 6) 
                     parsed_options.no_color = true;
             } else if (options == CNWN_ERF_OPTIONS_LIST) {
                 if (optindex == 0)
@@ -201,8 +205,19 @@ int parse_arguments(int argc, char * argv[], cnwn_ERFOptions * ret_parsed_option
     return argindex;
 }
 
-int command_list_entries(const cnwn_ERFOptions * parsed_options, const char * prefix_path, int num_entries, const cnwn_ERFEntry * entries)
+////////////////////////////////////////////////////////////////
+//
+//
+// List
+//
+//
+////////////////////////////////////////////////////////////////
+
+int command_list_entries(const cnwn_ERFOptions * parsed_options, const char * prefix_path, int num_entries, const cnwn_ERFEntry * entries, int * ret_listed, int64_t * ret_size)
 {
+    int errors = 0;
+    int64_t size = 0;
+    int listed = 0;
     for (int i = 0; i < num_entries; i++) {
         char filename[CNWN_PATH_MAX_SIZE];
         cnwn_resource_type_and_key_to_filename(entries[i].type, entries[i].key, sizeof(filename), filename);
@@ -225,12 +240,19 @@ int command_list_entries(const cnwn_ERFOptions * parsed_options, const char * pr
                    );
         else
             printf("%s%s\n", parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE), filename);
+        listed++;
+        size += entries[i].resource_size;
     }
-    return 0;
+    if (ret_listed != NULL)
+        *ret_listed = listed;
+    if (ret_size != NULL)
+        *ret_size = size;
+    return errors;
 }
 
 int command_list(const cnwn_ERFOptions * parsed_options, int argc, char * argv[])
 {
+    int errors = 0;
     cnwn_File * f = cnwn_file_open_r(parsed_options->erf_path);
     if (f == NULL) {
         fprintf(stderr, "%sERROR: %serror opening file (%s): %s%s\n",
@@ -239,7 +261,7 @@ int command_list(const cnwn_ERFOptions * parsed_options, int argc, char * argv[]
                 cnwn_get_error(),
                 parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
                 parsed_options->erf_path);
-        return -1;
+        return 1;
     }
     cnwn_ERFHeader header = {0};
     cnwn_ERFEntry * entries = NULL;
@@ -252,12 +274,9 @@ int command_list(const cnwn_ERFOptions * parsed_options, int argc, char * argv[]
                 cnwn_get_error(),
                 parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
                 parsed_options->erf_path);
-        return -1;
+        return 1;
     }
-    int64_t total_size = 0;
-    for (int i = 0; i < erfret; i++) 
-        total_size += entries[i].resource_size;
-    if (parsed_options->verbose || parsed_options->info) 
+    if (parsed_options->verbose || parsed_options->info) {
         printf("%s%s (%s) %d.%d (%s)\n",
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
                CNWN_RESOURCE_TYPE_EXTENSION(header.type),
@@ -265,34 +284,70 @@ int command_list(const cnwn_ERFOptions * parsed_options, int argc, char * argv[]
                header.version.major,
                header.version.minor,
                header.version_str);
-    int listerr = 0;
-    if (!parsed_options->info) 
-        listerr = command_list_entries(parsed_options, "", header.num_entries, entries);
-    if (listerr < 0 && !parsed_options->no_quit) {
-        free(entries);
-        if (!parsed_options->no_color)
-            printf("%s", CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE));
-        return -1;
-    }
-    if (parsed_options->verbose || parsed_options->info) 
-        printf("%sTotal: %s%u %sentr%s and %s%"PRId64" %sbyte%s of resources.\n",
+        printf("%sLocalized strings: %s%u %s(offset=0x%x size=%u)\n",
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
+               header.num_localized_strings,
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+               header.localized_strings_offset,
+               header.localized_strings_size);
+        printf("%sEntries: %s%u %s(keys=0x%x, resources=0x%x)\n",
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
                header.num_entries,
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+               header.keys_offset,
+               header.resources_offset);
+        if (!parsed_options->info) {
+            return 0;
+        }
+    }
+    int64_t size = 0;
+    int listerr = 0;
+    int num_listed = 0;
+    if (!parsed_options->info) 
+        listerr = command_list_entries(parsed_options, "", header.num_entries, entries, &num_listed, &size);
+    else {
+        num_listed = header.num_entries;
+        for (int i = 0; i < num_listed; i++)
+            size += entries[i].resource_size;
+    }
+    if (listerr > 0 && !parsed_options->no_quit) {
+        free(entries);
+        if (!parsed_options->no_color)
+            printf("%s", CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE));
+        return 1;
+    } else
+        errors += listerr;
+    if (parsed_options->verbose || parsed_options->info) 
+        printf("%sTotal: %s%u %sentr%s and %s%"PRId64" %sbyte%s of resources.\n",
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
+               num_listed,
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
                header.num_entries == 1 ? "y" : "ies",
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
-               total_size,
+               size,
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
-               total_size == 1 ? "" : "s"
+               size == 1 ? "" : "s"
                );
     free(entries);
-    return 0;
+    return errors;
 }
 
+////////////////////////////////////////////////////////////////
+//
+//
+// Extract
+//
+//
+////////////////////////////////////////////////////////////////
 
-int command_extract_entries(cnwn_File * erf_f, const cnwn_ERFOptions * parsed_options, const char * prefix_path, int num_entries, const cnwn_ERFEntry * entries)
+int command_extract_entries(cnwn_File * erf_f, const cnwn_ERFOptions * parsed_options, const char * prefix_path, int num_entries, const cnwn_ERFEntry * entries, int * ret_extracted, int64_t * ret_size)
 {
+    int64_t size = 0;
+    int extracted = 0;
+    int errors = 0;
     char outpath[CNWN_PATH_MAX_SIZE];
     cnwn_path_concat(outpath, sizeof(outpath), parsed_options->dir, NULL);
     if (!cnwn_string_isempty(outpath)) {
@@ -305,8 +360,14 @@ int command_extract_entries(cnwn_File * erf_f, const cnwn_ERFOptions * parsed_op
                     cnwn_get_error(),
                     parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
                     outpath);
-            if (!parsed_options->no_quit)
-                return -1;
+            if (!parsed_options->no_quit) {
+                if (ret_extracted != NULL)
+                    *ret_extracted = extracted;
+                if (ret_size != NULL)
+                    *ret_size = size;
+                return 1;
+            } else
+                errors++;
         } else if (mkret > 0 && parsed_options->verbose)
             printf("%sCreated path: %s%s\n",
                    parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
@@ -331,8 +392,14 @@ int command_extract_entries(cnwn_File * erf_f, const cnwn_ERFOptions * parsed_op
                     cnwn_get_error(),
                     parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
                     parsed_options->erf_path);
-            if (!parsed_options->no_quit) 
-                return -1;
+            if (!parsed_options->no_quit) {
+                if (ret_extracted != NULL)
+                    *ret_extracted = extracted;
+                if (ret_size != NULL)
+                    *ret_size = size;
+                return 1;
+            } else
+                errors++;
         } else {
             cnwn_File * outf = cnwn_file_open_w(outpathf);
             if (outf != NULL) {
@@ -346,18 +413,27 @@ int command_extract_entries(cnwn_File * erf_f, const cnwn_ERFOptions * parsed_op
                             parsed_options->erf_path);
                     if (!parsed_options->no_quit) {
                         cnwn_file_close(outf);
-                        return -1;
-                    }
-                } else if (parsed_options->verbose) 
-                    printf("%s%s %s=> %s%s %s%s\n",
-                           parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_GREEN),
-                           path,
-                           parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
-                           parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
-                           outpathf,
-                           parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
-                           number
-                           );
+                        if (ret_extracted != NULL)
+                            *ret_extracted = extracted;
+                        if (ret_size != NULL)
+                            *ret_size = size;
+                        return 1;
+                    } else
+                        errors++;
+                } else {
+                    if (parsed_options->verbose) 
+                        printf("%s%s %s=> %s%s %s%s\n",
+                               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_GREEN),
+                               path,
+                               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+                               outpathf,
+                               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
+                               number
+                               );
+                    extracted++;
+                    size += copyret;
+                }
                 cnwn_file_close(outf);
             } else {
                 fprintf(stderr, "%sERROR: %serror creating file (%s): %s%s\n",
@@ -366,16 +442,27 @@ int command_extract_entries(cnwn_File * erf_f, const cnwn_ERFOptions * parsed_op
                         cnwn_get_error(),
                         parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
                         outpathf);
-                if (!parsed_options->no_quit)
-                    return -1;
+                if (!parsed_options->no_quit) {
+                    if (ret_extracted != NULL)
+                        *ret_extracted = extracted;
+                    if (ret_size != NULL)
+                        *ret_size = size;
+                    return 1;
+                } else
+                    errors++;
             }
         }
     }
-    return 0;
+    if (ret_extracted != NULL)
+        *ret_extracted = extracted;
+    if (ret_size != NULL)
+        *ret_size = size;
+    return errors;
 }
 
 int command_extract(const cnwn_ERFOptions * parsed_options, int argc, char * argv[])
 {
+    int errors = 0;
     cnwn_File * f = cnwn_file_open_r(parsed_options->erf_path);
     if (f == NULL) {
         fprintf(stderr, "%sERROR: %serror opening file (%s): %s%s\n",
@@ -384,7 +471,7 @@ int command_extract(const cnwn_ERFOptions * parsed_options, int argc, char * arg
                 cnwn_get_error(),
                 parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
                 parsed_options->erf_path);
-        return -1;
+        return 1;
     }
     cnwn_ERFHeader header = {0};
     cnwn_ERFEntry * entries = NULL;
@@ -397,11 +484,8 @@ int command_extract(const cnwn_ERFOptions * parsed_options, int argc, char * arg
                 parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
                 parsed_options->erf_path);
         cnwn_file_close(f);
-        return -1;
+        return 1;
     }
-    int64_t total_size = 0;
-    for (int i = 0; i < erfret; i++) 
-        total_size += entries[i].resource_size;
     if (parsed_options->verbose) 
         printf("%s%s (%s) %d.%d (%s)\n",
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
@@ -410,35 +494,235 @@ int command_extract(const cnwn_ERFOptions * parsed_options, int argc, char * arg
                header.version.major,
                header.version.minor,
                header.version_str);
-    int err_extract = command_extract_entries(f, parsed_options, "", header.num_entries, entries);
+    int num_extracted = 0;
+    int64_t size = 0;
+    int err_extract = command_extract_entries(f, parsed_options, "", header.num_entries, entries, &num_extracted, &size);
     cnwn_file_close(f);
-    if (err_extract < 0 && !parsed_options->no_quit) {
+    if (err_extract > 0 && !parsed_options->no_quit) {
         free(entries);
         if (!parsed_options->no_color)
             printf("%s", CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE));
-        return -1;
-    }
+        return 1;
+    } else
+        errors += err_extract;
     if (parsed_options->verbose) 
         printf("%sTotal: %s%u %sentr%s and %s%"PRId64" %sbyte%s of resources.\n",
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
-               header.num_entries,
+               num_extracted,
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
                header.num_entries == 1 ? "y" : "ies",
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
-               total_size,
+               size,
                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
-               total_size == 1 ? "" : "s"
+               size == 1 ? "" : "s"
                );
     free(entries);
-    return 0;
+    return errors;
 }
+
+////////////////////////////////////////////////////////////////
+//
+//
+// Create
+//
+//
+////////////////////////////////////////////////////////////////
+
+int command_create_entries(cnwn_File * erf_f, const cnwn_ERFOptions * parsed_options, const char * prefix_path, int num_entries, const cnwn_ERFEntry * entries, int * ret_created, int64_t * ret_size)
+{
+    int64_t size = 0;
+    int created = 0;
+    int errors = 0;
+    char inpath[CNWN_PATH_MAX_SIZE];
+    cnwn_path_concat(inpath, sizeof(inpath), parsed_options->dir, NULL);
+    if (!cnwn_string_isempty(inpath)) {
+        // FIXME: check existance and ask permission mkdir unless no-quit.
+        int mkret = cnwn_mkdirs(inpath);
+        if (mkret < 0) {
+            fprintf(stderr, "%sERROR: %serror creating directory (%s): %s%s\n",
+                    parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_ALERT),
+                    parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                    cnwn_get_error(),
+                    parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+                    inpath);
+            if (!parsed_options->no_quit) {
+                if (ret_created != NULL)
+                    *ret_created = created;
+                if (ret_size != NULL)
+                    *ret_size = size;
+                return 1;
+            } else
+                errors++;
+        } else if (mkret > 0 && parsed_options->verbose)
+            printf("%sCreated path: %s%s\n",
+                   parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                   parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+                   inpath);
+    }
+    for (int i = 0; i < num_entries; i++) {
+        char filename[CNWN_PATH_MAX_SIZE];
+        cnwn_resource_type_and_key_to_filename(entries[i].type, entries[i].key, sizeof(filename), filename);
+        char path[CNWN_PATH_MAX_SIZE];
+        cnwn_path_concat(path, sizeof(path), prefix_path, filename, NULL);
+        char inpathf[CNWN_PATH_MAX_SIZE];
+        cnwn_path_concat(inpathf, sizeof(inpathf), inpath, path, NULL);
+        char number[128];
+        snprintf(number, sizeof(number), "%u", entries[i].resource_size);
+        // FIXME: check existance and ask permission to overwrite unless no-quit.
+        int seekret = cnwn_file_seek(erf_f, entries[i].resource_offset);
+        if (seekret < 0) {
+            fprintf(stderr, "%sERROR: %serror seeking file (%s): %s%s\n",
+                    parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_ALERT),
+                    parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                    cnwn_get_error(),
+                    parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+                    parsed_options->erf_path);
+            if (!parsed_options->no_quit) {
+                if (ret_created != NULL)
+                    *ret_created = created;
+                if (ret_size != NULL)
+                    *ret_size = size;
+                return 1;
+            } else
+                errors++;
+        } else {
+            cnwn_File * inf = cnwn_file_open_r(inpathf);
+            if (inf != NULL) {
+                int copyret = cnwn_file_copy_bytes(inf, erf_f, entries[i].resource_size);
+                if (copyret < 0) {
+                    fprintf(stderr, "%sERROR: %serror reading file (%s): %s%s\n",
+                            parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_ALERT),
+                            parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                            cnwn_get_error(),
+                            parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+                            parsed_options->erf_path);
+                    if (!parsed_options->no_quit) {
+                        cnwn_file_close(inf);
+                        if (ret_created != NULL)
+                            *ret_created = created;
+                        if (ret_size != NULL)
+                            *ret_size = size;
+                        return 1;
+                    } else
+                        errors++;
+                } else {
+                    if (parsed_options->verbose) 
+                        printf("%s%s %s=> %s%s %s%s\n",
+                               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_GREEN),
+                               path,
+                               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+                               inpathf,
+                               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
+                               number
+                               );
+                    created++;
+                    size += copyret;
+                }
+                cnwn_file_close(inf);
+            } else {
+                fprintf(stderr, "%sERROR: %serror opening file (%s): %s%s\n",
+                        parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_ALERT),
+                        parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                        cnwn_get_error(),
+                        parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+                        inpathf);
+                if (!parsed_options->no_quit) {
+                    if (ret_created != NULL)
+                        *ret_created = created;
+                    if (ret_size != NULL)
+                        *ret_size = size;
+                    return 1;
+                } else
+                    errors++;
+            }
+        }
+    }
+    if (ret_created != NULL)
+        *ret_created = created;
+    if (ret_size != NULL)
+        *ret_size = size;
+    return errors;
+}
+
+int command_create(const cnwn_ERFOptions * parsed_options, int argc, char * argv[])
+{
+    int errors = 0;
+    // FIXME: ask unless force
+    cnwn_File * f = cnwn_file_open_w(parsed_options->erf_path);
+    if (f == NULL) {
+        fprintf(stderr, "%sERROR: %serror creating file (%s): %s%s\n",
+                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_ALERT),
+                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                cnwn_get_error(),
+                parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+                parsed_options->erf_path);
+        return 1;
+    }
+    cnwn_ERFHeader header = {0};
+    cnwn_ERFEntry * entries = NULL;
+    int erfret = 0;
+    // int erfret = cnwn_erf_read_header(f, &header, &entries);
+    // if (erfret < 0) {
+    //     fprintf(stderr, "%sERROR: %serror reading entries (%s): %s%s\n",
+    //             parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_ALERT),
+    //             parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+    //             cnwn_get_error(),
+    //             parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_PATH),
+    //             parsed_options->erf_path);
+    //     cnwn_file_close(f);
+    //     return 1;
+    // }
+    if (parsed_options->verbose) 
+        printf("%s%s (%s) %d.%d (%s)\n",
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+               CNWN_RESOURCE_TYPE_EXTENSION(header.type),
+               header.type_str,
+               header.version.major,
+               header.version.minor,
+               header.version_str);
+    int num_created = 0;
+    int64_t size = 0;
+    int err_created = command_create_entries(f, parsed_options, "", header.num_entries, entries, &num_created, &size);
+    cnwn_file_close(f);
+    if (err_created > 0 && !parsed_options->no_quit) {
+        free(entries);
+        if (!parsed_options->no_color)
+            printf("%s", CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE));
+        return 1;
+    } else
+        errors += err_created;
+    if (parsed_options->verbose) 
+        printf("%sTotal: %s%u %sentr%s and %s%"PRId64" %sbyte%s of resources.\n",
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
+               num_created,
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+               header.num_entries == 1 ? "y" : "ies",
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
+               size,
+               parsed_options->no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+               size == 1 ? "" : "s"
+               );
+    free(entries);
+    return errors;
+}
+
+////////////////////////////////////////////////////////////////
+//
+//
+// Mainz0r
+//
+//
+////////////////////////////////////////////////////////////////
 
 int main(int argc, char * argv[])
 {
     cnwn_ERFOptions parsed_options = {0};
     if (parse_arguments(argc, argv, &parsed_options) < 0)
         return 1;
+    int errors = 0;
     if (parsed_options.help) {        
         if (parsed_options.command == 'l')
             print_help(CNWN_ERF_OPTIONS_LIST, false);
@@ -452,20 +736,20 @@ int main(int argc, char * argv[])
             print_help(CNWN_ERF_OPTIONS_GENERAL, false);
     } else if (parsed_options.version) {
         printf("%s%d.%d.%d\n", parsed_options.no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE), VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
-    } else if (parsed_options.command == 'l') {
-        if (command_list(&parsed_options, argc, argv) < 0) {
-            if (!parsed_options.no_color)
-                printf("%s", CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE));
-            return 2;
-        }
-    } else if (parsed_options.command == 'e') {
-        if (command_extract(&parsed_options, argc, argv) < 0) {
-            if (!parsed_options.no_color)
-                printf("%s", CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE));
-            return 2;
-        }
+    } else if (parsed_options.command == 'l') 
+        errors = command_list(&parsed_options, argc, argv);
+    else if (parsed_options.command == 'e') 
+        errors = command_extract(&parsed_options, argc, argv);
+    if (errors > 0) {
+        fprintf(stderr, "%sERROR: %s%d %serror%s reported.\n",
+                parsed_options.no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_ALERT),
+                parsed_options.no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NUMBER),
+                errors,
+                parsed_options.no_color ? "": CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE),
+                errors != 1 ? "s" : ""
+                );
     }
     if (!parsed_options.no_color)
         printf("%s", CNWN_CLI_COLOR(CNWN_CLI_COLOR_NONE));
-    return 0;
+    return errors > 0 ? 2 : 0;
 }

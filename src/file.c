@@ -59,6 +59,21 @@ cnwn_File * cnwn_file_open_rw(const char * path)
 #endif
 }
 
+cnwn_File * cnwn_file_open_rw_notrunc(const char * path)
+{
+#ifdef SOME_PLATFORM
+#else
+    int fd = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+    if (fd < 0) {
+        cnwn_set_error("%s", strerror(errno));
+        return NULL;
+    }
+    cnwn_File * ret = malloc(sizeof(cnwn_File));
+    ret->fd = fd;
+    return ret;
+#endif
+}
+
 void cnwn_file_close(cnwn_File * f)
 {
     if (f != NULL) {
@@ -403,8 +418,16 @@ int cnwn_path_concat(char * s, int max_size, ...)
             tmps[offset++] = CNWN_PATH_SEPARATOR;
         int aslen = strlen(as);
         aslen = CNWN_MINMAX(aslen, 0, sizeof(tmps) - offset - 1);
-        if (aslen > 0)
+        if (aslen > 0) {
+            if (as[aslen - 1] == CNWN_PATH_SEPARATOR) {
+                bool escaped = false;
+                for (int j = aslen - 1; j >= 0 && as[j] == CNWN_PATH_ESCAPE; j--)
+                    escaped = !escaped;
+                if (!escaped)
+                    aslen--;
+            }
             memcpy(tmps + offset, as, sizeof(char) * aslen);
+        }
         offset += aslen;
     }    
     va_end(args);
