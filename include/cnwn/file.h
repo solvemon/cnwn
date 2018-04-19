@@ -146,7 +146,7 @@ extern CNWN_PUBLIC int64_t cnwn_file_write(cnwn_File * f, int64_t size, const ui
  * @return The number of written bytes or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int64_t cnwn_file_copy(cnwn_File * f, cnwn_File * output_f, int64_t size);
+extern CNWN_PUBLIC int64_t cnwn_file_copy_bytes(cnwn_File * f, cnwn_File * output_f, int64_t size);
 
 /**
  * Read an unsigned 64-bit integer from a file.

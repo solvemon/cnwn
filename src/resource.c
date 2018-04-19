@@ -115,12 +115,12 @@ const cnwn_ResourceInfo CNWN_RESOURCE_INFOS[CNWN_MAX_RESOURCE_TYPE] = {
     {"key", "",  9999}
 };
 
-cnwn_ResourceType cnwn_resource_type_from_erf_type(int erf_type)
+cnwn_ResourceType cnwn_resource_type_from_itype(int itype)
 {
-    if (erf_type < 0 || erf_type > 9999)
+    if (itype < 0 || itype > 9999)
         return CNWN_RESOURCE_TYPE_NONE;
     for (cnwn_ResourceType rt = CNWN_RESOURCE_TYPE_NONE + 1; rt < CNWN_MAX_RESOURCE_TYPE; rt++) 
-        if (CNWN_RESOURCE_INFOS[rt].erf_type == erf_type)
+        if (CNWN_RESOURCE_INFOS[rt].itype == itype)
             return rt;
     return CNWN_RESOURCE_TYPE_NONE;
 }

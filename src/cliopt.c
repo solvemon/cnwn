@@ -1,5 +1,21 @@
 #include "cnwn/cliopt.h"
 
+#include <unistd.h>
+
+const char * CNWN_CLI_COLORS[CNWN_MAX_CLI_COLOR] =
+{
+    "\x1b[0m",
+    "\x1b[97m",
+    "\x1b[90m",
+    "\x1b[91m",
+    "\x1b[92m",
+    "\x1b[94m",
+    "\x1b[93m",
+    "\x1b[96m",
+    "\x1b[95m"
+};
+
+
 int cnwn_cli_option_to_string(const cnwn_CliOption * option, int max_size, char * ret_s)
 {
     char tmps[8192];
@@ -21,6 +37,8 @@ int cnwn_cli_option_to_string(const cnwn_CliOption * option, int max_size, char 
                     offset += snprintf(tmps + offset, sizeof(tmps) - offset, "--%s", option->lkey);
             }
         }
+        while (offset < 20)
+            tmps[offset++] = ' ';
         if (offset < sizeof(tmps) - 1 && !cnwn_string_isempty(option->help)) {
             if (offset > 0) 
                 offset += snprintf(tmps + offset, sizeof(tmps) - offset, " : ");
@@ -121,4 +139,12 @@ void cnwn_cli_options_print_help(const cnwn_CliOption * options, const char * pr
             printf("%s%s\n", prefix != NULL ? prefix : "", tmps);
         }
     }
+}
+
+bool cnwn_cli_has_color(void)
+{
+#ifdef SOME_PLATFORM
+#else
+    return isatty(1) == 1 ? true : false;
+#endif
 }

@@ -42,7 +42,7 @@ int cnwn_erf_entry_to_string(const cnwn_ERFEntry * entry, bool detailed, int max
                      cnwn_string_isempty(filename) ? "": ", ",
                      entry->resource_size,
                      entry->resource_offset,
-                     entry->erf_type,
+                     entry->itype,
                      entry->index,
                      entry->key_offset,
                      entry->resource_id
@@ -196,15 +196,15 @@ int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEnt
                 free(entries);
                 return -1;
             }
-            ret = cnwn_file_read_uint16(f, &entries[i].erf_type);
+            ret = cnwn_file_read_uint16(f, &entries[i].itype);
             if (ret < 0) {
                 cnwn_set_error("error reading ERF type for entry #%d (%s)", i, cnwn_get_error());
                 free(entries);
                 return -1;
             }
-            entries[i].type = cnwn_resource_type_from_erf_type(entries[i].erf_type);
+            entries[i].type = cnwn_resource_type_from_itype(entries[i].itype);
             if (entries[i].type <= CNWN_RESOURCE_TYPE_NONE || entries[i].type >= CNWN_MAX_RESOURCE_TYPE) {
-                cnwn_set_error("invalid ERF resource type for entry #%d (%u)", i, entries[i].erf_type);
+                cnwn_set_error("invalid ERF resource type for entry #%d (%u)", i, entries[i].itype);
                 free(entries);
                 return -1;
             }

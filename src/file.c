@@ -235,7 +235,7 @@ int64_t cnwn_file_write(cnwn_File * f, int64_t size, const uint8_t * data)
 #endif
 }
 
-int64_t cnwn_file_copy(cnwn_File * f, cnwn_File * output_f, int64_t size)
+int64_t cnwn_file_copy_bytes(cnwn_File * f, cnwn_File * output_f, int64_t size)
 {
     if (f == NULL) {
         cnwn_set_error("file is NULL");
@@ -633,7 +633,9 @@ int cnwn_mkdirs(const char * path)
         return -1;
     }
     int ret = 0;
-    for (int i = 0; path[i] != 0; i++) {
+    int i;
+    int last = 0;
+    for (i = 0; path[i] != 0; i++) {
         if (path[i] == CNWN_PATH_SEPARATOR) {
             bool escaped = false;
             for (int j = i - 1; j >= 0 && path[j] == CNWN_PATH_ESCAPE; j--)
@@ -645,8 +647,17 @@ int cnwn_mkdirs(const char * path)
                 if (mkdirret < 0)
                     return -1;
                 ret += mkdirret;
+                last = i;
             }
         }
+    }
+    if (last < i - 1) {
+        char tmppath[CNWN_PATH_MAX_SIZE];
+        cnwn_copy_string(tmppath, sizeof(tmppath), path, i + 1);
+        int mkdirret = cnwn_mkdir(tmppath);
+        if (mkdirret < 0)
+            return -1;
+        ret += mkdirret;
     }
     return ret;
 }

@@ -34,7 +34,7 @@
  * @param ct The resource type enum.
  * @returns An ERF type or -1 if the enum is out of range.
  */
-#define CNWN_RESOURCE_TYPE_ERF_TYPE(ct) ((ct) >= CNWN_RESOURCE_TYPE_NONE && (ct) < CNWN_MAX_RESOURCE_TYPE ? CNWN_RESOURCE_INFOS[(ct)].erf_type : -1)
+#define CNWN_RESOURCE_TYPE_ITYPE(ct) ((ct) >= CNWN_RESOURCE_TYPE_NONE && (ct) < CNWN_MAX_RESOURCE_TYPE ? CNWN_RESOURCE_INFOS[(ct)].itype : -1)
 
 /**
  * Describes an ERF entry type.
@@ -635,7 +635,7 @@ struct cnwn_ResourceInfo_s {
     /**
      * The internal ERF type.
      */
-    int erf_type;
+    int itype;
 };
 
 #ifdef __cplusplus
@@ -650,10 +650,10 @@ extern CNWN_PUBLIC const cnwn_ResourceInfo CNWN_RESOURCE_INFOS[CNWN_MAX_RESOURCE
 
 /**
  * Get a resource type from an ERF resource type.
- * @param erf_type The ERF type.
- * @returns The resource type or CNWN_RESOURCE_TYPE_NONE if @p erf_type is invalid.
+ * @param itype The ERF type.
+ * @returns The resource type or CNWN_RESOURCE_TYPE_NONE if @p itype is invalid.
  */
-extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_erf_type(int erf_type);
+extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_itype(int itype);
 
 /**
  * Get a resource type from a filename extension.

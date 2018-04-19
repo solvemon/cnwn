@@ -177,7 +177,7 @@ struct cnwn_ERFEntry_s {
     /**
      * The ERF type of the resource.
      */
-    uint16_t erf_type;
+    uint16_t itype;
     
     /**
      * Some unused bytes.

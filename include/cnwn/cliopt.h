@@ -8,54 +8,51 @@
 #include "cnwn/common.h"
 
 /**
- * ANSI color red.
- **/
-#define CNWN_ANSI_COLOR_RED "\x1b[91m"
+ * Get an ANSI escape sequence for text color.
+ * @param c The color enum.
+ * @returns A pointer to a string with the escape sequence or an empty string if @p c is invalid or cnwn_cli_has_color() returns false.
+ */
+#define CNWN_CLI_COLOR(c) ((c) >= CNWN_CLI_COLOR_NONE && (c) < CNWN_MAX_CLI_COLOR && cnwn_cli_has_color() ? CNWN_CLI_COLORS[(c)] : "")
 
 /**
- * ANSI color green.
- **/
-#define CNWN_ANSI_COLOR_GREEN "\x1b[92m"
+ * Gray = grey.
+ */
+#define CNWN_CLI_COLOR_GRAY CNWN_CLI_COLOR_GREY
 
 /**
- * ANSI color yellow.
- **/
-#define CNWN_ANSI_COLOR_YELLOW "\x1b[93m"
+ * Normal = none (reset)
+ */
+#define CNWN_CLI_COLOR_NORMAL CNWN_CLI_COLOR_NONE
 
 /**
- * ANSI color blue.
- **/
-#define CNWN_ANSI_COLOR_BLUE "\x1b[94m"
+ * Emphasis = white (bright)
+ */
+#define CNWN_CLI_COLOR_EMPHASIS CNWN_CLI_COLOR_WHITE
 
 /**
- * ANSI color magenta.
- **/
-#define CNWN_ANSI_COLOR_MAGENTA "\x1b[95m"
+ * Alert = red.
+ */
+#define CNWN_CLI_COLOR_ALERT CNWN_CLI_COLOR_RED
 
 /**
- * ANSI color cyan.
- **/
-#define CNWN_ANSI_COLOR_CYAN "\x1b[96m"
+ * Number = cyan.
+ */
+#define CNWN_CLI_COLOR_NUMBER CNWN_CLI_COLOR_CYAN
 
 /**
- * ANSI color white.
- **/
-#define CNWN_ANSI_COLOR_WHITE "\x1b[97m"
+ * Path = magenta.
+ */
+#define CNWN_CLI_COLOR_PATH CNWN_CLI_COLOR_MAGENTA
 
 /**
- * ANSI color black.
- **/
-#define CNWN_ANSI_COLOR_BLACK "\x1b[30m"
+ * Entry = green.
+ */
+#define CNWN_CLI_COLOR_ENTRY CNWN_CLI_COLOR_GREEN
 
 /**
- * ANSI color grey.
- **/
-#define CNWN_ANSI_COLOR_GREY "\x1b[37m"
-
-/**
- * ANSI color reset.
- **/
-#define CNWN_ANSI_COLOR_RESET "\x1b[0m"
+ * Details = grey.
+ */
+#define CNWN_CLI_COLOR_DETAILS CNWN_CLI_COLOR_GREY
 
 /**
  * Check whether or not an option is a short option (single dash).
@@ -86,6 +83,68 @@
  * @note Returned by cnwn_parse_cli_option().
  */
 #define CNWN_CLI_OPTION_MISSING -2
+
+/**
+ * A list of colors.
+ */
+enum cnwn_CliColor_e {
+
+    /**
+     * No color (reset color code).
+     */
+    CNWN_CLI_COLOR_NONE = 0,
+
+    /**
+     * The whitest color available to the terminal.
+     */
+    CNWN_CLI_COLOR_WHITE,
+
+    /**
+     * A "bright shade of black.
+     */
+    CNWN_CLI_COLOR_GREY,
+
+    /**
+     * Red.
+     */
+    CNWN_CLI_COLOR_RED,
+
+    /**
+     * Green.
+     */
+    CNWN_CLI_COLOR_GREEN,
+
+    /**
+     * Blue.
+     */
+    CNWN_CLI_COLOR_BLUE,
+
+    /**
+     * Yellow.
+     */
+    CNWN_CLI_COLOR_YELLOW,
+
+    /**
+     * Cyan
+     */
+    CNWN_CLI_COLOR_CYAN,
+    
+    /**
+     * Magenta.
+     */
+    CNWN_CLI_COLOR_MAGENTA,
+    
+    /**
+     * Max enum.
+     */
+    CNWN_MAX_CLI_COLOR
+};
+
+
+/**
+ * @see enum cnwn_CliColor_e
+ */
+typedef enum cnwn_CliColor_e cnwn_CliColor;
 
 /**
  * @see struct cnwn_CliOption_s
@@ -121,6 +180,11 @@ struct cnwn_CliOption_s {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * Some predefined ANSI colors.
+ */
+extern CNWN_PUBLIC const char * CNWN_CLI_COLORS[CNWN_MAX_CLI_COLOR];
 
 /**
  * Turn a cli option into a string.
@@ -164,6 +228,12 @@ extern CNWN_PUBLIC int cnwn_cli_options_parse(const cnwn_CliOption * options, in
  * @param prefix Prefix every printed line with this string (NULL is OK).
  */
 extern CNWN_PUBLIC void cnwn_cli_options_print_help(const cnwn_CliOption * options, const char * prefix);
+
+/**
+ * Check it the terminal has ANSI color support.
+ * @returns True if the we have color support on stdout, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_cli_has_color(void);
 
 #ifdef __cplusplus
 }
