@@ -20,8 +20,8 @@ int main(int argc, char * argv[])
                 printf("Valid argument: %s\n", argv[argindex]);
         } else if (retparse == CNWN_CLI_OPTION_INVALID)
             printf("Invalid option: %s\n", argv[argindex]);
-        else if (retparse == CNWN_CLI_OPTION_MISSING)
-            printf("Missing argument for option: %s\n", argv[argindex]);
+        else if (retparse == CNWN_CLI_OPTION_NOARG)
+            printf("Noarg argument for option: %s\n", argv[argindex]);
         else
             printf("Unknown error for option: %s\n", argv[argindex]);
         argindex += (retparse < 0 ? 1 : retparse);

@@ -224,34 +224,34 @@ extern CNWN_PUBLIC int cnwn_erf_entry_to_string(const cnwn_ERFEntry * entry, boo
  * @param f The ERF file to read from.
  * @param[out] ret_header Return the header, NULL to omit.
  * @param[out] ret_entries Return an array of entries (must be freed using free()), pass NULL to omit.
+ * @param[out] ret_bytes The number of read bytes, NULL to omit.
  * @returns The number of returned entries (or available entries if @p ret_entries is NULL) limited by @p max_entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEntry ** ret_entries);
+extern CNWN_PUBLIC int cnwn_erf_read_header(cnwn_File * f, cnwn_ERFHeader * ret_header, cnwn_ERFEntry ** ret_entries, int64_t * ret_bytes);
 
 /**
- * Default function to extract an entry from an ERF file just as it is (straight up copy data).
- * @param input_f The file to read from.
- * @param header The header of the ERF.
- * @param resouce_type The type of entry to extract.
- * @param resource_size The size of the resouce.
- * @param output_f The file to write to.
- * @returns The number of written bytes (to @p output_f) or a negative value on error.
+ * Write an ERF file header.
+ * @param f The ERF file to write to.
+ * @param header The header.
+ * @param num_entries The number of entries to write.
+ * @param entries The entries.
+ * @param[out] ret_bytes The number of written bytes, NULL to omit.
+ * @returns The number of written entries or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_extract_entry(cnwn_File * input_f, const cnwn_ERFHeader * header, cnwn_ResourceType resource_type, int64_t resource_size, cnwn_File * output_f);
+extern CNWN_PUBLIC int cnwn_erf_write_header(cnwn_File * f, const cnwn_ERFHeader * header, int num_entries, const cnwn_ERFEntry * entries, int64_t * ret_bytes);
 
 /**
- * Default function to archive an entry from to an ERF file just as it is (straight up copy data).
- * @param input_f The file to read from.
+ * Read localized strings from an ERF file.
+ * @param f The ERF file to read from.
  * @param header The header of the ERF.
- * @param resouce_type The type of entry to extract.
- * @param output_f The file to write to.
- * @returns The number of written bytes (to @p f) or a negative value on error.
+ * @param[out] ret_strings Return an array of strings (NULL sentinel, must be freed using cnwn_freestring()) or NULL if no strings were found, pass NULL to omit.
+ * @param[out] ret_bytes The number of read bytes, NULL to omit.
+ * @returns The number of returned strings (or available entries if @p ret_strings is NULL).
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_erf_archive_entry(cnwn_File * input_f, const cnwn_ERFHeader * header, cnwn_ResourceType resouce_type, cnwn_File * output_f);
-
+extern CNWN_PUBLIC int cnwn_erf_read_localized_strings(cnwn_File * f, const cnwn_ERFHeader * header, char *** ret_strings, int64_t * ret_bytes);
 
 #ifdef __cplusplus
 }

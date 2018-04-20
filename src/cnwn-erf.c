@@ -75,15 +75,18 @@ int main(int argc, char * argv[])
     cnwn_ERFUtilOptions options = {0};
     const char * erf_path = NULL;
     char command = 0;
-    int errors = cnwn_erf_util_parse_options(argc, argv, &options, &erf_path, &command, 1024, option_errors);
+    char ** cmdargs = NULL;
+    int errors = cnwn_erf_util_parse_options(argc, argv, &options, &erf_path, &command, &cmdargs, 1024, option_errors);
     if (options.help) {
         print_help(&options, command);
         printf("%s", CNWN_COLORIZE_NORMAL(options.color));
+        cnwn_free_strings(cmdargs);
         return 0;
     }
     if (options.version) {
         print_version(&options);
         printf("%s", CNWN_COLORIZE_NORMAL(options.color));
+        cnwn_free_strings(cmdargs);
         return 0;
     }
     if (erf_path == NULL) {
@@ -93,6 +96,7 @@ int main(int argc, char * argv[])
                 CNWN_COLORIZE_NUMBER(options.color),
                 CNWN_COLORIZE_NORMAL(options.color));
         printf("%s", CNWN_COLORIZE_NORMAL(options.color));
+        cnwn_free_strings(cmdargs);
         return 1;
     }
     if (command == 0)
@@ -105,6 +109,7 @@ int main(int argc, char * argv[])
                 CNWN_COLORIZE_NORMAL(options.color),
                 argv[2]);
         printf("%s", CNWN_COLORIZE_NORMAL(options.color));
+        cnwn_free_strings(cmdargs);
         return 1;
     }
     if (errors > 0) {
@@ -117,7 +122,7 @@ int main(int argc, char * argv[])
                         option_errors[i].argindex,
                         CNWN_COLORIZE_NORMAL(options.color),
                         argv[option_errors[i].argindex]);
-            else if (option_errors[i].error == CNWN_CLI_OPTION_MISSING)
+            else if (option_errors[i].error == CNWN_CLI_OPTION_NOARG)
                 fprintf(stderr, "%sERROR:%s argument %s%d%s missing option argument: %s\n",
                         CNWN_COLORIZE_ERROR(options.color),
                         CNWN_COLORIZE_NORMAL(options.color),
@@ -135,18 +140,45 @@ int main(int argc, char * argv[])
                         argv[option_errors[i].argindex]);
         }
         printf("%s", CNWN_COLORIZE_NORMAL(options.color));
+        cnwn_free_strings(cmdargs);
         return 3;
     }
+    cnwn_RegexpArray regexp_array;
     switch (command) {
     case 'i':
-        errors = cnwn_erf_util_info(erf_path, &options);
+        errors += cnwn_erf_util_info(erf_path, &options);
         break;
     case 'l':
-        errors = cnwn_erf_util_list(erf_path, &options);
+        if (cnwn_regexp_array_init2(&regexp_array, options.extended_regexp, (const char **)cmdargs) < 0) {
+            fprintf(stderr, "%sERROR:%s %s\n",
+                    CNWN_COLORIZE_ERROR(options.color),
+                    CNWN_COLORIZE_NORMAL(options.color),
+                    cnwn_get_error());
+            errors++;
+            break;
+        }
+        errors += cnwn_erf_util_list(erf_path, &options, &regexp_array);
+        cnwn_regexp_array_deinit(&regexp_array);
+        break;
+    case 'e':
+        if (cnwn_regexp_array_init2(&regexp_array, options.extended_regexp, (const char **)cmdargs) < 0) {
+            fprintf(stderr, "%sERROR:%s %s\n",
+                    CNWN_COLORIZE_ERROR(options.color),
+                    CNWN_COLORIZE_NORMAL(options.color),
+                    cnwn_get_error());
+            errors++;
+            break;
+        }
+        errors += cnwn_erf_util_extract(erf_path, &options, &regexp_array);
+        cnwn_regexp_array_deinit(&regexp_array);
+        break;
+    case 'c':
+        errors += cnwn_erf_util_create(erf_path, &options, (const char **)cmdargs);
         break;
     default:
         break;
     }
+    cnwn_free_strings(cmdargs);
     if (errors > 0) {
         printf("%sERROR: %s%d %serror%s reported.\n",
                CNWN_COLORIZE_ERROR(options.color),

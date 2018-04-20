@@ -47,7 +47,7 @@
  * The option is missing an argument.
  * @note Returned by cnwn_parse_cli_option().
  */
-#define CNWN_CLI_OPTION_MISSING -2
+#define CNWN_CLI_OPTION_NOARG -2
 
 /**
  * A list of colors.
@@ -160,6 +160,7 @@ extern CNWN_PUBLIC const char * CNWN_CLI_COLORS[CNWN_MAX_CLI_COLOR];
  * Turn a cli option into a string.
  * @param option The cli option.
  * @param max_size The maximum size of the returned string including zero terminator.
+ * @param[out] ret_s Return the string here.
  * @returns The length of the returned string excluding zero terminator.
  */
 extern CNWN_PUBLIC int cnwn_cli_option_to_string(const cnwn_CliOption * option, int max_size, char * ret_s);

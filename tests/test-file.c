@@ -13,7 +13,7 @@ void test_parts(const char * path) {
 int main(int argc, char * argv[])
 {
     test_parts("/a/b/c/d.txt");
-    char ** ret = cnwn_listdir(NULL, true, NULL, false);
+    char ** ret = cnwn_listdir2(NULL, true, NULL, false);
     if (ret == NULL)
         printf("ERROR: %s\n", cnwn_get_error());
     for (char ** p = ret; p != NULL && *p != NULL; p++)

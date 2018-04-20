@@ -155,13 +155,13 @@ extern CNWN_PUBLIC uint16_t cnwn_swap16(uint16_t i);
 
 /**
  * Free a NULL terminated array of strings (and the array itself).
- * @param strings The string array.
+ * @param strings The string array, must have  NULL sentinel. It's OK to pass NULL in which case the function does nothing.
  */
 extern CNWN_PUBLIC void cnwn_free_strings(char ** strings);
 
 /**
  * Count the strings in a NULL terminated array.
- * @param strings The string array.
+ * @param strings The string array, must have  NULL sentinel. It's OK to pass NULL in which case the function does nothing.
  * @return The number of counted strings.
  */
 extern CNWN_PUBLIC int cnwn_count_strings(char ** strings);

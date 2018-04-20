@@ -108,7 +108,7 @@ enum cnwn_ERFUtilOption_e {
      * Temporary file location.
      */
     CNWN_ERF_UTIL_OPTION_TEMPORARY_FILE,
-    
+
     /**
      * Max enum.
      */
@@ -189,7 +189,7 @@ struct cnwn_ERFUtilOptions_s {
      * @note Appiles to extract command only.
      */
     bool xml;
-
+    
     /**
      * Temporary file.
      * @note Appiles to add and remove commands.
@@ -260,28 +260,51 @@ extern CNWN_PUBLIC const cnwn_CliOption CNWN_ERF_UTIL_OPTIONS_DIFF[];
  * @param[out] ret_options Return the options here.
  * @param[out] ret_erf_path Return the ERF path here.
  * @param[out] ret_command Return command here.
+ * @param[out] ret_cmdargs Return a string array (with NULL sentinel) containig all the command arguments, will return NULL if there are no command arguments.
  * @param max_errors The maximum number of errors to return.
  * @param[out] ret_errors Return errors here, NULL to omit.
  * @returns The number of returned errors.
  */
-extern CNWN_PUBLIC int cnwn_erf_util_parse_options(int argc, char * argv[], cnwn_ERFUtilOptions * ret_options, const char ** ret_erf_path, char * ret_command, int max_errors, cnwn_ERFUtilOptionError * ret_errors);
+extern CNWN_PUBLIC int cnwn_erf_util_parse_options(int argc, char * argv[], cnwn_ERFUtilOptions * ret_options, const char ** ret_erf_path, char * ret_command, char *** ret_cmdargs, int max_errors, cnwn_ERFUtilOptionError * ret_errors);
 
 /**
  * Show ERF info.
  * @param path The path to the ERF file.
  * @param options The options.
- * @returns The number of reported errors.
+ * @returns The number of errors.
+ * @note This function will print errors to stderr.
  */
 extern CNWN_PUBLIC int cnwn_erf_util_info(const char * path, const cnwn_ERFUtilOptions * options);
 
 /**
- * List all the entries in an ERF file.
+ * List entries in an ERF file.
  * @param path The path to the ERF file.
  * @param options The options.
- * @returns The number of reported errors.
+ * @param regexp_array Filter on these regexps, can be NULL for no regexps.
+ * @returns The number of errors.
+ * @note This function will print errors to stderr.
  */
-extern CNWN_PUBLIC int cnwn_erf_util_list(const char * path, const cnwn_ERFUtilOptions * options);
+extern CNWN_PUBLIC int cnwn_erf_util_list(const char * path, const cnwn_ERFUtilOptions * options, const cnwn_RegexpArray * regexp_array);
 
+/**
+ * Extract entries in an ERF file.
+ * @param path The path to the ERF file.
+ * @param options The options.
+ * @param regexp_array Filter on these regexps, can be NULL for no regexps.
+ * @returns The number of errors.
+ * @note This function will print errors to stderr.
+ */
+extern CNWN_PUBLIC int cnwn_erf_util_extract(const char * path, const cnwn_ERFUtilOptions * options, const cnwn_RegexpArray * regexp_array);
+
+/**
+ * Create an ERF.
+ * @param path The path to the ERF file.
+ * @param options The options.
+ * @param cmdargs An array of strings with NULL sentinel, these will be the files added to the ERF.
+ * @returns The number of errors.
+ * @note This function will print errors to stderr.
+ */
+extern CNWN_PUBLIC int cnwn_erf_util_create(const char * path, const cnwn_ERFUtilOptions * options, const char ** cmdargs);
 
 #ifdef __cplusplus
 }

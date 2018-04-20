@@ -101,7 +101,7 @@ int cnwn_cli_options_parse(const cnwn_CliOption * options, int argindex, int arg
                     }
                     if (ret_optarg != NULL)
                         *ret_optarg = NULL;
-                    return CNWN_CLI_OPTION_MISSING;
+                    return CNWN_CLI_OPTION_NOARG;
                 }
                 if (ret_optindex != NULL)
                     *ret_optindex = optindex;

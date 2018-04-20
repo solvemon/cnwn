@@ -68,10 +68,22 @@ extern CNWN_PUBLIC bool cnwn_regexp_match(const cnwn_Regexp * regexp, const char
  * Initialize an array of regular expressions.
  * @param regexp_array The array struct to initialize.
  * @param extended True for extended regexps.
- * @param regexps The strings with regular expressions and terminated with a NULL string.
+ * @param num_strings The number of regexps to expect in @p regexps.
+ * @param strings The strings with regular expressions and terminated with a NULL string.
  * @returns The number of regexps in the intialized array or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_regexp_array_init(cnwn_RegexpArray * regexp_array, bool extended, const char * regexps[]);
+extern CNWN_PUBLIC int cnwn_regexp_array_init(cnwn_RegexpArray * regexp_array, bool extended, int num_strings, const char ** strings);
+
+/**
+ * Initialize an array of regular expressions.
+ * @param regexp_array The array struct to initialize.
+ * @param extended True for extended regexps.
+ * @param strings An array of strings with a NULL sentinel.
+ * @returns The number of regexps in the intialized array or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_regexp_array_init2(cnwn_RegexpArray * regexp_array, bool extended, const char ** strings);
 
 /**
  * Initialize an array of regular expressions.
@@ -79,14 +91,42 @@ extern CNWN_PUBLIC int cnwn_regexp_array_init(cnwn_RegexpArray * regexp_array, b
  * @param extended True for extended regexps.
  * @returns The number of regexps in the intialized array or a negative value on error.
  * @note The variable arguments must be strings with regular expressions and terminated with a NULL argument.
+ * @see cnwn_get_error() if this function returns a negative value.
  */
 extern CNWN_PUBLIC int cnwn_regexp_array_init_var(cnwn_RegexpArray * regexp_array, bool extended, ...);
 
+
+
+/**
+ * Initialize an array of regular expressions.
+ * @param extended True for extended regexps.
+ * @param num_strings The number of regexps to expect in @p regexps.
+ * @param strings The strings with regular expressions and terminated with a NULL string.
+ * @returns A newly allocated regexp array or NULL on error.
+ * @see cnwn_get_error() if this function returns NULL.
+ */
+extern CNWN_PUBLIC cnwn_RegexpArray * cnwn_regexp_array_new(bool extended, int num_strings, const char ** strings);
+
+/**
+ * Initialize an array of regular expressions.
+ * @param extended True for extended regexps.
+ * @param strings An array of strings with a NULL sentinel.
+ * @returns A newly allocated regexp array or NULL on error.
+ * @see cnwn_get_error() if this function returns NULL.
+ */
+extern CNWN_PUBLIC cnwn_RegexpArray * cnwn_regexp_array_new2(bool extended, const char ** strings);
+
 /**
  * Deinitialize regexp array.
- * @param regexp_array The regular expression to free.
+ * @param regexp_array The regular expression to deinit.
  */
 extern CNWN_PUBLIC void cnwn_regexp_array_deinit(cnwn_RegexpArray * regexp_array);
+
+/**
+ * Deinitialize and free regexp array.
+ * @param regexp_array The regular expression to deinit and free.
+ */
+extern CNWN_PUBLIC void cnwn_regexp_array_free(cnwn_RegexpArray * regexp_array);
 
 /**
  * Match the string against all of the arrays regular expressions using logical OR.

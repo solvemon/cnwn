@@ -685,19 +685,15 @@ int cnwn_mkdirs(const char * path)
     return ret;
 }
 
-char ** cnwn_listdir(const char * path, bool full, const char * regexps[], bool extended)
+char ** cnwn_listdir(const char * path, bool full, const cnwn_RegexpArray * regexp_array)
 {
     if (path == NULL)
         path = "."; // FIXME: different on windows maybe?
-    cnwn_RegexpArray regexp_array;
-    if (cnwn_regexp_array_init(&regexp_array, extended, regexps) < 0)
-        return NULL;
     DIR * dp;
     struct dirent * ep;
     dp = opendir(path);
     if (dp == NULL) {
         cnwn_set_error("%s", strerror(errno));
-        cnwn_regexp_array_deinit(&regexp_array);
         return NULL;
     }
     int count = 0;
@@ -706,7 +702,7 @@ char ** cnwn_listdir(const char * path, bool full, const char * regexps[], bool 
             char tmps[CNWN_PATH_MAX_SIZE];
             cnwn_path_concat(tmps, sizeof(tmps), path, ep->d_name, NULL);
             if (cnwn_path_isfile(tmps) == 1
-                && cnwn_regexp_array_match_any(&regexp_array, ep->d_name))
+                && cnwn_regexp_array_match_any(regexp_array, ep->d_name))
                 count++;
         }
     }
@@ -718,7 +714,7 @@ char ** cnwn_listdir(const char * path, bool full, const char * regexps[], bool 
             char tmps[CNWN_PATH_MAX_SIZE];
             cnwn_path_concat(tmps, sizeof(tmps), path, ep->d_name, NULL);
             if (cnwn_path_isfile(tmps) == 1
-                && cnwn_regexp_array_match_any(&regexp_array, ep->d_name)) {
+                && cnwn_regexp_array_match_any(regexp_array, ep->d_name)) {
                 int namelen = full ? strlen(tmps) : strlen(ep->d_name);
                 ret[index] = malloc(sizeof(char) * (namelen + 1));
                 cnwn_copy_string(ret[index], namelen + 1, (full ? tmps : ep->d_name), -1);
@@ -728,6 +724,18 @@ char ** cnwn_listdir(const char * path, bool full, const char * regexps[], bool 
     }
     ret[index] = NULL;
     closedir(dp);
+    return ret;
+}
+
+char ** cnwn_listdir2(const char * path, bool full, bool extended, const char ** strings)
+{
+    if (path == NULL)
+        path = "."; // FIXME: different on windows maybe?
+    cnwn_RegexpArray regexp_array;
+    if (cnwn_regexp_array_init2(&regexp_array, extended, strings) < 0)
+        return NULL;
+    char ** ret = cnwn_listdir(path, full, &regexp_array);
+    cnwn_regexp_array_deinit(&regexp_array);
     return ret;
 }
 

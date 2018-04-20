@@ -11,8 +11,9 @@ void cnwn_set_error_va(const char * format, va_list args)
 {
     char tmps[8192];
     int len = vsnprintf(tmps, sizeof(tmps), format, args);
-    if (len > 0)
-        memcpy(CNWN_ERROR_MESSAGE, tmps, sizeof(char) * len);
+    for (int i = 0; i < len; i++)
+        if (tmps[i] >= 32)
+            CNWN_ERROR_MESSAGE[i] = tmps[i];
     CNWN_ERROR_MESSAGE[len] = 0;
 }
 
