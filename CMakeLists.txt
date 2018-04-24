@@ -27,20 +27,23 @@ option(BUILD_TESTS "Build tests" ON)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_definitions(-DVERSION_MAJOR=${VERSION_MAJOR} -DVERSION_MINOR=${VERSION_MINOR} -DVERSION_PATCH=${VERSION_PATCH} -D_POSIX_C_SOURCE=200112L)
-TEST_BIG_ENDIAN(IS_BIG_ENDIAN)
+add_definitions(-DBUILD_VERSION_MAJOR=${VERSION_MAJOR} -DBUILD_VERSION_MINOR=${VERSION_MINOR} -DBUILD_VERSION_PATCH=${VERSION_PATCH})
+add_definitions(-D_POSIX_C_SOURCE=200112L)
+
+test_big_endian(IS_BIG_ENDIAN)
 if (IS_BIG_ENDIAN)
-  add_definitions(-DBIG_ENDIAN)
+  add_definitions(-DBUILD_BIG_ENDIAN)
+else()
+  add_definitions(-DBUILD_LITTLE_ENDIAN)
 endif()
+
 
 set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/regulexp.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/file.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/cliopt.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf_util.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/endian.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/string.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/path.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/file_system.c
   )
 
 
@@ -51,18 +54,16 @@ set_target_properties(cnwn-shared PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPU
 add_library(cnwn-static STATIC ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-add_executable(cnwn-erf src/cnwn-erf.c)
-target_link_libraries(cnwn-erf cnwn-static)
+# add_executable(cnwn-erf src/cnwn-erf.c)
+# target_link_libraries(cnwn-erf cnwn-static)
 
 if(BUILD_TESTS)
-  add_executable(test-file tests/test-file.c)
-  target_link_libraries(test-file cnwn-shared)
-  add_executable(test-resource tests/test-resource.c)
-  target_link_libraries(test-resource cnwn-shared)
-  add_executable(test-erf tests/test-erf.c)
-  target_link_libraries(test-erf cnwn-shared)
-  add_executable(test-cliopt tests/test-cliopt.c)
-  target_link_libraries(test-cliopt cnwn-shared)
+  add_executable(test-string tests/test-string.c)
+  target_link_libraries(test-string cnwn-shared)
+  add_executable(test-path tests/test-path.c)
+  target_link_libraries(test-path cnwn-shared)
+  add_executable(test-file_system tests/test-file_system.c)
+  target_link_libraries(test-file_system cnwn-shared)
 endif()
 
 install(TARGETS cnwn-shared DESTINATION "${CMAKE_INSTALL_LIBDIR}")
