@@ -410,6 +410,36 @@ int cnwn_strrfindi(const char * s, int index, const char * sub, const char * esc
     return -1;
 }
 
+int cnwn_strfindchar(const char * s, int index, char c, char e)
+{
+    if (s != NULL)
+        for (int i = 0; s[i] != 0; i++)
+            if (s[i] == c) {
+                bool escaped = false;
+                if (e != 0)
+                    for (int j = i -1; j >= 0 && s[j] == e; j--)
+                        escaped = !escaped;
+                if (!escaped)
+                    return i;
+            }
+    return -1;
+}
+
+int cnwn_strfindchari(const char * s, int index, char c, char e)
+{
+    if (s != NULL)
+        for (int i = 0; s[i] != 0; i++)
+            if (CNWN_CHAR_ICASE_EQ(s[i], c)) {
+                bool escaped = false;
+                if (e != 0)
+                    for (int j = i -1; j >= 0 && CNWN_CHAR_ICASE_EQ(s[j], e); j--)
+                        escaped = !escaped;
+                if (!escaped)
+                    return i;
+            }
+    return -1;
+}
+
 int cnwn_strcount(const char * s, int index, const char * sub, const char * esc)
 {
     int slen = cnwn_strlen(s);
@@ -450,6 +480,18 @@ int cnwn_strcounti(const char * s, int index, const char * sub, const char * esc
             }
     }
     return count;
+}
+
+int cnwn_strescape(char * r, int max_size, const char * s, const char * sub, const char * esc)
+{
+    // FIXME: implement
+    return cnwn_strcpy(r, max_size, s, -1);
+}
+
+int cnwn_strunescape(char * r, int max_size, const char * s, const char * sub, const char * esc)
+{
+    // FIXME: implement
+    return cnwn_strcpy(r, max_size, s, -1);
 }
 
 char ** cnwn_strsplit(const char * s, int max_splits, const char * sep, const char * esc)

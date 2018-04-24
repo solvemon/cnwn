@@ -250,6 +250,26 @@ extern CNWN_PUBLIC int cnwn_strrfind(const char * s, int index, const char * sub
 extern CNWN_PUBLIC int cnwn_strrfindi(const char * s, int index, const char * sub, const char * esc);
 
 /**
+ * Find a char in a string.
+ * @param s The string to find the char in.
+ * @param index Where in @p s to start searching for @p sub.
+ * @param c The char to search for.
+ * @param e Allow escaping of the char.
+ * @returns The index of where the char was found or a negative value if it wasn't found.
+ */
+extern CNWN_PUBLIC int cnwn_strfindchar(const char * s, int index, char c, char e);
+
+/**
+ * Find a char in a string with case insensetive search.
+ * @param s The string to find the char in.
+ * @param index Where in @p s to start searching for @p sub.
+ * @param c The char to search for.
+ * @param e Allow escaping of the char.
+ * @returns The index of where the char was found or a negative value if it wasn't found.
+ */
+extern CNWN_PUBLIC int cnwn_strfindchari(const char * s, int index, char c, char e);
+
+/**
  * Count occurrences of a substring.
  * @param s The string to count substrings in.
  * @param index Where in @p s to start counting @p sub.
@@ -268,6 +288,28 @@ extern CNWN_PUBLIC int cnwn_strcount(const char * s, int index, const char * sub
  * @returns The number of occurrences of the substring.
  */
 extern CNWN_PUBLIC int cnwn_strcounti(const char * s, int index, const char * sub, const char * esc);
+
+/**
+ * Escape all occurrences of @p sub that aren't already escaped.
+ * @param[out] r Write the return string here, pass NULL to get the required length.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param s The string to escape.
+ * @param sub The substring to escape.
+ * @param esc The escape.
+ * @returns The length of the return string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_strescape(char * r, int max_size, const char * s, const char * sub, const char * esc);
+
+/**
+ * Unescape all occurrences of @p sub that are escaped.
+ * @param[out] r Write the return string here, pass NULL to get the required length.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param s The string to escape.
+ * @param sub The substring to escape.
+ * @param esc The escape.
+ * @returns The length of the return string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_strunescape(char * r, int max_size, const char * s, const char * sub, const char * esc);
 
 /**
  * Split a string into a NULL terminated array of strings.

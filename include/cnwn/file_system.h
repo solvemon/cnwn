@@ -17,7 +17,8 @@
  * File handle.
  *
  * Definition per platform:
- * - POSIX: struct cnwn_File_s { int fd; };
+ * - Windows: struct cnwn_File_s { HFILE hfile; };
+ * - Others: struct cnwn_File_s { int fd; };
  */
 typedef struct cnwn_File_s cnwn_File;
 
@@ -67,9 +68,19 @@ extern CNWN_PUBLIC int cnwn_file_system_rm(const char * path);
  * @param to_path The destination path (or new name).
  * @returns The number of moved files and directories or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
- * @note This function will NOT overwrite any existing files or directories.
+ * @note This function will overwrite any existing files or directories.
  */
 extern CNWN_PUBLIC int cnwn_file_system_mv(const char * path, const char * to_path);
+
+/**
+ * Copy a file.
+ * @param path The path of a file to copy.
+ * @param to_path The destination path.
+ * @returns The number of copied files or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ * @note This function will overwrite any existing files.
+ */
+extern CNWN_PUBLIC int cnwn_file_system_cp(const char * path, const char * to_path);
 
 /**
  * Get the size of a file (or directory which will sum up all the file sizes recursively).
@@ -250,7 +261,17 @@ extern CNWN_PUBLIC int64_t cnwn_file_write16(cnwn_File * f, int16_t i);
  * @returns The file size in bytes or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int64_t cnwn_file_get_size(cnwn_File * f);
+extern CNWN_PUBLIC int64_t cnwn_file_size(cnwn_File * f);
+
+/**
+ * Copy bytes from one file to another.
+ * @param f The file to get the size from.
+ * @param size The number of bytes to copy.
+ * @param output_f The output file.
+ * @returns The number of copied bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_copy(cnwn_File * f, int64_t size, cnwn_File * output_f);
 
 #ifdef __cplusplus
 }

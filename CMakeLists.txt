@@ -37,6 +37,10 @@ else()
   add_definitions(-DBUILD_LITTLE_ENDIAN)
 endif()
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+  add_definitions(-DBUILD_WINDOWS_FILE)
+endif()
+
 
 set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common.c
@@ -44,6 +48,9 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/string.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/path.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/file_system.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/options.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/resource_type.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   )
 
 
@@ -64,6 +71,10 @@ if(BUILD_TESTS)
   target_link_libraries(test-path cnwn-shared)
   add_executable(test-file_system tests/test-file_system.c)
   target_link_libraries(test-file_system cnwn-shared)
+  add_executable(test-options tests/test-options.c)
+  target_link_libraries(test-options cnwn-shared)
+  add_executable(test-resource tests/test-resource.c)
+  target_link_libraries(test-resource cnwn-shared)
 endif()
 
 install(TARGETS cnwn-shared DESTINATION "${CMAKE_INSTALL_LIBDIR}")
