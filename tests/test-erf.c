@@ -1,4 +1,4 @@
-#include "cnwn/restypes/erf.h"
+#include "cnwn/erf.h"
 
 
 int main(int argc, char * argv[])

@@ -199,7 +199,8 @@ struct cnwn_ErfStringEntry_s {
         /**
          * The offset of the entry.
          */
-        int64_t entry_offset;        
+        int64_t entry_offset;
+        
     } internal;
 };
     

@@ -24,6 +24,8 @@ set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 
 option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TOOLS "Build tools" ON)
+option(BUILD_XML "Build XML support" ON)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -41,6 +43,10 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   add_definitions(-DBUILD_WINDOWS_FILE)
 endif()
 
+if (BUILD_XML)
+  add_definitions(-DBUILD_XML)
+endif()
+
 
 set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common.c
@@ -50,8 +56,9 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/file_system.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/options.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource_type.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/restypes/erf.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tool_erf.c
   )
 
 
@@ -62,8 +69,10 @@ set_target_properties(cnwn-shared PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPU
 add_library(cnwn-static STATIC ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-# add_executable(cnwn-erf src/cnwn-erf.c)
-# target_link_libraries(cnwn-erf cnwn-static)
+if(BUILD_TOOLS)
+  add_executable(cnwn-erf src/cnwn-erf.c)
+  target_link_libraries(cnwn-erf cnwn-static)
+endif()
 
 if(BUILD_TESTS)
   add_executable(test-string tests/test-string.c)

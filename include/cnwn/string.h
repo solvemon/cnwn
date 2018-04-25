@@ -118,15 +118,6 @@ extern CNWN_PUBLIC int cnwn_strupper(char * r, int max_size, const char * s);
 extern CNWN_PUBLIC int cnwn_strlower(char * r, int max_size, const char * s);
 
 /**
- * Remove all ASCII control characters (< 32).
- * @param r Write result string here, pass NULL to get the required length.
- * @param max_size The maximum size of the return string including the zero terminator.
- * @param s The string to remove control characters from.
- * @returns The length of the returned string.
- */
-extern CNWN_PUBLIC int cnwn_strnoctl(char * r, int max_size, const char * s);
-
-/**
  * Concatenate strings from variable arguments.
  * @param r Write result string here, pass NULL to get the required length.
  * @param max_size The maximum size of the return string including the zero terminator.
@@ -326,6 +317,15 @@ extern CNWN_PUBLIC int cnwn_strescape(char * r, int max_size, const char * s, co
  * @returns The length of the return string (excluding zero terminator).
  */
 extern CNWN_PUBLIC int cnwn_strunescape(char * r, int max_size, const char * s, const char * sub, const char * esc);
+
+/**
+ * Remove all control characters from a string (ascii < 32).
+ * @param[out] r Write the return string here, pass NULL to get the required length.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param s The string to remove controls for.
+ * @returns The length of the return string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_strnoctl(char * r, int max_size, const char * s);
 
 /**
  * Split a string into a NULL terminated array of strings.

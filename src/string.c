@@ -192,26 +192,6 @@ int cnwn_strlower(char * r, int max_size, const char * s)
     }
     return len;
 }
-int cnwn_strnoctl(char * r, int max_size, const char * s)
-{
-    int len = cnwn_strlen(s);
-    if (max_size > 0) {
-        if (len > max_size - 1)
-            len = max_size - 1;
-        int index = 0;
-        if (r != NULL) {
-            for (int i = 0; i < len; i++)
-                if (s[i] >= 32)
-                    r[index++] = s[i];
-            r[index] = 0;
-        } else
-            for (int i = 0; i < len; i++)
-                if (s[i] >= 32)
-                    index++;
-        return index;
-    }
-    return len;
-}
 
 int cnwn_strcat_va(char * r, int max_size, const char * sep, va_list args)
 {
@@ -505,6 +485,21 @@ int cnwn_strunescape(char * r, int max_size, const char * s, const char * sub, c
 {
     // FIXME: implement
     return cnwn_strcpy(r, max_size, s, -1);
+}
+
+int cnwn_strnoctl(char * r, int max_size, const char * s)
+{
+    int soffset = 0;
+    if (s != NULL) {
+        for (int i = 0; s[i] != 0; i++)
+            if (r != NULL && soffset < max_size - 1)
+                r[soffset++] = s[i] > 32 ? s[i] : 32;
+            else
+                soffset++;
+    }
+    if (r != NULL && max_size > 0)
+        r[soffset] = 0;
+    return soffset;
 }
 
 char ** cnwn_strsplit(const char * s, int max_splits, const char * sep, const char * esc)

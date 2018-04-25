@@ -44,6 +44,11 @@
 #define CNWN_OPTION_ARG_IS_ARG(arg) (!CNWN_OPTION_ARG_IS_SHORTHAND(arg) && !CNWN_OPTION_ARG_IS_LONGHAND(arg) && !CNWN_OPTION_ARG_IS_DISCONTINUE(arg))
 
 /**
+ * Check if an option is a sentinel or not.
+ */
+#define CNWN_OPTION_SENTINEL(option) ((const void *)(option) == NULL || ((option)->shorthand == 0 && cnwn_strisblank((option)->longhand)))
+
+/**
  * @see struct cnwn_Option_s
  */
 typedef struct cnwn_Option_s cnwn_Option;
@@ -64,19 +69,33 @@ struct cnwn_Option_s {
     const char * longhand;
 
     /**
-     * Requires arg or not.
+     * The name of the argument or NULL (or empty string) for no argument.
      */
-    bool arg;
+    const char * arg;
     
     /**
      * Some help plz!
      */
     const char * help;
+
+    /**
+     * A value.
+     */
+    int optvalue;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * Turn an option into something useful for a help string (although the option help is NOT included).
+ * @param option The option.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param[out] ret_s Return the string here, NULL to get the required length.
+ * @returns The length of the return string excluding zero terminator.
+ */
+extern CNWN_PUBLIC int cnwn_option_to_string(const cnwn_Option * option, int max_size, char * ret_s);
 
 /**
  * Find an option.
@@ -93,10 +112,11 @@ extern CNWN_PUBLIC int cnwn_options_find(const cnwn_Option * options, const char
  * @param argc The number of arguments avilable.
  * @param argv The arguments.
  * @param[out] ret_optindex Return an option index here or -1 if the argument at the specified index is not an option.
+ * @param[out] ret_optarg Return the option argument or NULL if none was provided or the option doesn't require an argument.
  * @returns The number of parsed arguments, zero for no more arguments and a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_options_parse(const cnwn_Option * options, int index, int argc, char * argv[], int * ret_optindex);
+extern CNWN_PUBLIC int cnwn_options_parse(const cnwn_Option * options, int index, int argc, char * argv[], int * ret_optindex, const char ** ret_optarg);
 
 #ifdef __cplusplus
 }

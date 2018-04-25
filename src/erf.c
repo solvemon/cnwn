@@ -1,4 +1,4 @@
-#include "cnwn/restypes/erf.h"
+#include "cnwn/erf.h"
 
 const char * CNWN_ERF_TYPE_STRINGS[CNWN_MAX_ERF_TYPE] = {
     "",
@@ -210,6 +210,10 @@ int64_t cnwn_erf_header_read_string_entry(cnwn_File * f, cnwn_ErfStringEntry * r
     }
     ret += ioret;
     ret_entry->size = tmp32;            
+    if (ret_entry->size < 8) {
+        cnwn_set_error("size too small (%"PRId64">=%d)", ret_entry->size, 8);
+        return -1;
+    }
     if (ret_entry->size > CNWN_ERF_STRING_ENTRY_MAX_SIZE) {
         cnwn_set_error("size too large (%"PRId64"<%d)", ret_entry->size, CNWN_ERF_STRING_ENTRY_MAX_SIZE);
         return -1;
