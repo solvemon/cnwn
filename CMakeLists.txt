@@ -58,6 +58,7 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource_type.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/regexp.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/tool_erf.c
   )
 

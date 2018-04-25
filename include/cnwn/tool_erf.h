@@ -8,6 +8,17 @@
 #include "cnwn/resource.h"
 #include "cnwn/options.h"
 #include "cnwn/erf.h"
+#include "cnwn/regexp.h"
+
+/**
+ * Check if we are forcing yes on all questions.
+ */
+#define CNWN_TOOL_ERF_SETTINGS_FORCE_YES(settings) ((const void *)(settings) != NULL && (settings)->yes && !(settings)->no)
+
+/**
+ * Check if we are forcing no on all questions.
+ */
+#define CNWN_TOOL_ERF_SETTINGS_FORCE_NO(settings) ((const void *)(settings) != NULL && !(settings)->yes && (settings)->no)
 
 /**
  * @see struct cnwn_ToolErfSettings_s
@@ -48,6 +59,11 @@ struct cnwn_ToolErfSettings_s {
      * Temporary file.
      */
     const char * tempfile;
+    
+    /**
+     * Directory.
+     */
+    const char * directory;
 };
 
 #ifdef __cplusplus
@@ -71,6 +87,16 @@ extern CNWN_PUBLIC int cnwn_tool_erf_command_info(const cnwn_ToolErfSettings * s
  * @returns Return the number of reported errors.
  */
 extern CNWN_PUBLIC int cnwn_tool_erf_command_list(const cnwn_ToolErfSettings * settings, const char * path, int argc, char * argv[]);
+
+/**
+ * Run the extract command.
+ * @param settings Some settings.
+ * @param path The path to the ERF file.
+ * @param argc The argument count.
+ * @param argv The arguments.
+ * @returns Return the number of reported errors.
+ */
+extern CNWN_PUBLIC int cnwn_tool_erf_command_extract(const cnwn_ToolErfSettings * settings, const char * path, int argc, char * argv[]);
 
 #ifdef __cplusplus
 }

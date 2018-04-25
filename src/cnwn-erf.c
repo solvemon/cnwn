@@ -9,6 +9,7 @@
 #define CNWN_TOOL_ERF_OPTION_YES 6
 #define CNWN_TOOL_ERF_OPTION_NO 7
 #define CNWN_TOOL_ERF_OPTION_TEMPFILE 8
+#define CNWN_TOOL_ERF_OPTION_DIRECTORY 9
 
 const cnwn_Option CNWN_TOOL_ERF_OPTIONS[] = {
     {'h', "help", NULL, "Print help.", CNWN_TOOL_ERF_OPTION_HELP},
@@ -24,6 +25,7 @@ const cnwn_Option CNWN_TOOL_ERF_OPTIONS_LIST[] = {
 
 const cnwn_Option CNWN_TOOL_ERF_OPTIONS_EXTRACT[] = {
     {'x', "exclude", NULL, "Regexps exclude files.", CNWN_TOOL_ERF_OPTION_EXCLUDE},
+    {'d', "directory", "path", "Output directory.", CNWN_TOOL_ERF_OPTION_DIRECTORY},
     {'b', "binary", NULL, "Binary output formats.", CNWN_TOOL_ERF_OPTION_BINARY},
     {'Y', "yes", NULL, "Assume YES on all questions.", CNWN_TOOL_ERF_OPTION_YES},
     {'N', "no", NULL, "Assume NO on all questions.", CNWN_TOOL_ERF_OPTION_NO},
@@ -37,14 +39,14 @@ const cnwn_Option CNWN_TOOL_ERF_OPTIONS_CREATE[] = {
 };
 
 const cnwn_Option CNWN_TOOL_ERF_OPTIONS_ADD[] = {
-    {'T', "tempfile", "filename", "Override default temporary file.", CNWN_TOOL_ERF_OPTION_TEMPFILE},
+    {'T', "tempfile", "path", "Override default temporary file.", CNWN_TOOL_ERF_OPTION_TEMPFILE},
     {'Y', "yes", NULL, "Assume YES on all questions.", CNWN_TOOL_ERF_OPTION_YES},
     {'N', "no", NULL, "Assume NO on all questions.", CNWN_TOOL_ERF_OPTION_NO},
     {0}
 };
 
 const cnwn_Option CNWN_TOOL_ERF_OPTIONS_REMOVE[] = {
-    {'T', "tempfile", "filename", "Override default temporary file.", CNWN_TOOL_ERF_OPTION_TEMPFILE},
+    {'T', "tempfile", "path", "Override default temporary file.", CNWN_TOOL_ERF_OPTION_TEMPFILE},
     {'x', "exclude", NULL, "Regexps exclude files.", CNWN_TOOL_ERF_OPTION_EXCLUDE},
     {'Y', "yes", NULL, "Assume YES on all questions.", CNWN_TOOL_ERF_OPTION_YES},
     {'N', "no", NULL, "Assume NO on all questions.", CNWN_TOOL_ERF_OPTION_NO},
@@ -103,7 +105,7 @@ void print_help(void)
     printf("cnwn-erf extract [options] <ERF file> [regular expressions]\n");
     print_options_help(CNWN_TOOL_ERF_OPTIONS_EXTRACT, "    ");
     printf("\n");
-    printf("cnwn-erf create [options] <ERF file> [files or a single directory]\n");
+    printf("cnwn-erf create [options] <ERF file> [files or directories]\n");
     print_options_help(CNWN_TOOL_ERF_OPTIONS_CREATE, "    ");
     printf("\n");
     printf("cnwn-erf add [options] <ERF file> [files or a single directory]\n");
@@ -127,6 +129,7 @@ int main(int argc, char * argv[])
     const char * optarg;
     char command = 0;
     const char * erf_path = NULL;
+    int command_args_start = -1;
     while ((ret = cnwn_options_parse(current_options, index, argc, argv, &optindex, &optarg)) != 0) {
         const cnwn_Option * use_options = current_options;
         if (ret < 0 && optindex < 0) {
@@ -163,6 +166,9 @@ int main(int argc, char * argv[])
             case CNWN_TOOL_ERF_OPTION_TEMPFILE:
                 settings.tempfile = optarg;
                 break;
+            case CNWN_TOOL_ERF_OPTION_DIRECTORY:
+                settings.directory = optarg;
+                break;
             default:
                 break;
             }
@@ -195,7 +201,8 @@ int main(int argc, char * argv[])
             }
         } else if (erf_path == NULL) {
             erf_path = argv[index];
-        }
+        } else if (command_args_start < 0)
+            command_args_start = index;
         index += ret;
     }
     if (cnwn_strisblank(erf_path)) {
@@ -208,9 +215,14 @@ int main(int argc, char * argv[])
         errors += cnwn_tool_erf_command_info(&settings, erf_path);
         break;
     case 'l':
-        errors += cnwn_tool_erf_command_list(&settings, erf_path, 0, NULL);
+        errors += cnwn_tool_erf_command_list(&settings, erf_path,
+                                             command_args_start >= 0 ? argc - command_args_start : 0,
+                                             command_args_start >= 0 ? argv + command_args_start : NULL);
         break;
     case 'e':
+        errors += cnwn_tool_erf_command_extract(&settings, erf_path,
+                                                command_args_start >= 0 ? argc - command_args_start : 0,
+                                                command_args_start >= 0 ? argv + command_args_start : NULL);
         break;
     case 'c':
         break;
