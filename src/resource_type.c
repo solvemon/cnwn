@@ -22,7 +22,7 @@ const cnwn_ResourceDefinition CNWN_DEFINED_RESOURCES[CNWN_MAX_RESOURCE_TYPE] = {
     {"slt", 2008, ""},
     {"nss", 2009, "nwscript"},
     {"ncs", 2010, "compiled nwscript"},
-    {"mod", 2011, "nwn/mod"},
+    {"mod", 2011, ""},
     {"are", 2012, "area"},
     {"set", 2013, ""},
     {"ifo", 2014, ""},

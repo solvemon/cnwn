@@ -6,14 +6,14 @@
 #define CNWN_RESOURCE_TYPE_H
 
 #include "cnwn/common.h"
-#include "cnwn/path.h"
+#include "cnwn/file_system.h"
 
 /**
  * Check if a resource type is valid.
  * @param ct The resource type enum.
  * @returns True or false, you know.
  */
-#define CNWN_RESOUCE_TYPE_VALID(ct) ((ct) > CNWN_RESOURCE_TYPE_NONE && (ct) < CNWN_MAX_RESOURCE_TYPE)
+#define CNWN_RESOURCE_TYPE_VALID(ct) ((ct) > CNWN_RESOURCE_TYPE_NONE && (ct) < CNWN_MAX_RESOURCE_TYPE)
 
 /**
  * Get the extension for a resource type.

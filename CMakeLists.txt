@@ -50,7 +50,8 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/file_system.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/options.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource_type.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/restypes/erf.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
   )
 
 
@@ -73,6 +74,8 @@ if(BUILD_TESTS)
   target_link_libraries(test-file_system cnwn-shared)
   add_executable(test-options tests/test-options.c)
   target_link_libraries(test-options cnwn-shared)
+  add_executable(test-erf tests/test-erf.c)
+  target_link_libraries(test-erf cnwn-shared)
   add_executable(test-resource tests/test-resource.c)
   target_link_libraries(test-resource cnwn-shared)
 endif()

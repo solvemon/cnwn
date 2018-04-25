@@ -202,6 +202,25 @@ extern CNWN_PUBLIC int64_t cnwn_file_write(cnwn_File * f, int64_t size, const vo
 extern CNWN_PUBLIC int64_t cnwn_file_read_fixed(cnwn_File * f, int64_t size, void * ret_buffer);
 
 /**
+ * Read chars from file.
+ * @param f The file to read from.
+ * @param max_size The max size of the return string (read size is @p max_size - 1).
+ * @param[out] ret_string Return the string.
+ * @returns The number of read bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_read_string(cnwn_File * f, int max_size, char * ret_string);
+
+/**
+ * Write chars from file.
+ * @param f The file to write to.
+ * @param string The string to write.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_write_string(cnwn_File * f, const char * string);
+
+/**
  * Read 64-bit integer from file.
  * @param f The file to read from.
  * @param[out] ret_i Return the integer.
@@ -254,6 +273,60 @@ extern CNWN_PUBLIC int64_t cnwn_file_read16(cnwn_File * f, int16_t * ret_i);
  * @see cnwn_get_error() if this function returns a negative value.
  */
 extern CNWN_PUBLIC int64_t cnwn_file_write16(cnwn_File * f, int16_t i);
+
+/**
+ * Read 64-bit integer from file.
+ * @param f The file to read from.
+ * @param[out] ret_i Return the integer.
+ * @returns The number of read bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_readu64(cnwn_File * f, uint64_t * ret_i);
+
+/**
+ * Write 64-bit integer to file.
+ * @param f The file to write to.
+ * @param i The integer to write.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_writeu64(cnwn_File * f, uint64_t i);
+
+/**
+ * Read 32-bit integer from file.
+ * @param f The file to read from.
+ * @param[out] ret_i Return the integer.
+ * @returns The number of read bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_readu32(cnwn_File * f, uint32_t * ret_i);
+
+/**
+ * Write 32-bit integer to file.
+ * @param f The file to write to.
+ * @param i The integer to write.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_writeu32(cnwn_File * f, uint32_t i);
+
+/**
+ * Read 16-bit integer from file.
+ * @param f The file to read from.
+ * @param[out] ret_i Return the integer.
+ * @returns The number of read bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_readu16(cnwn_File * f, uint16_t * ret_i);
+
+/**
+ * Write 16-bit integer to file.
+ * @param f The file to write to.
+ * @param i The integer to write.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_writeu16(cnwn_File * f, uint16_t i);
 
 /**
  * Get the current file size (in bytes).

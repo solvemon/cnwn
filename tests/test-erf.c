@@ -1,56 +1,46 @@
-#include "cnwn/erf.h"
+#include "cnwn/restypes/erf.h"
 
-void test_read(const char * path)
-{
-    cnwn_File * f = cnwn_file_open_r(path);
-    if (f != NULL) {
-        cnwn_ERFHeader header;
-        cnwn_ERFEntry * entries;
-        int ret = cnwn_erf_read_header(f, &header, &entries, NULL);
-        if (ret >= 0) {
-            char tmps[1024];
-            cnwn_erf_header_to_string(&header, true, sizeof(tmps), tmps);
-            printf("ERF: %s\n", tmps);
-            for (int i = 0; i < ret; i++) {
-                cnwn_erf_entry_to_string(entries + i, true, sizeof(tmps), tmps);
-                printf("  %s\n", tmps);
-            }
-            free(entries);
-        } else
-            fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
-        cnwn_file_close(f);
-    } else
-        fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
-}
-
-void test_write(const char * path, const char * dst_path)
-{
-    cnwn_File * f = cnwn_file_open_r(path);
-    if (f != NULL) {
-        cnwn_ERFHeader header;
-        cnwn_ERFEntry * entries;
-        int ret = cnwn_erf_read_header(f, &header, &entries, NULL);
-        if (ret >= 0) {
-            cnwn_File * out_f = cnwn_file_open_w(dst_path);
-            if (f != NULL) {
-                int ret2 = cnwn_erf_write_header(out_f, &header, ret, entries, NULL);
-                if (ret2 < 0)
-                    fprintf(stderr, "ERROR: %s %s\n", cnwn_get_error(), dst_path);
-                cnwn_file_close(out_f);
-            } else
-                fprintf(stderr, "ERROR: %s %s\n", cnwn_get_error(), dst_path);
-            free(entries);
-        } else
-            fprintf(stderr, "ERROR: %s %s\n", cnwn_get_error(), path);
-        cnwn_file_close(f);
-    } else
-        fprintf(stderr, "ERROR: %s %s\n", cnwn_get_error(), path);
-}
 
 int main(int argc, char * argv[])
 {
-    // test_read(argc > 1 ? argv[1] : "../tests/test.mod");
-    test_write(argc > 1 ? argv[1] : "../tests/test.mod", "a.mod");
-    test_read("a.mod");
+    cnwn_File * f = cnwn_file_open(argc > 1 ? argv[1] : "../tests/test.mod", "r");
+    cnwn_ErfHeader * header = NULL;
+    int64_t ret = cnwn_erf_header_read(f, &header);
+    printf("Read returned: %"PRId64"\n", ret);
+    if (header != NULL) {
+        printf("ERF type: %s\n", CNWN_ERF_TYPE_STRING(header->type));
+        printf("ERF version: %d.%d\n", header->version.major, header->version.minor);
+        printf("String entries: %d\n", header->num_string_entries);
+        printf("Resource entries: %d\n", header->num_resource_entries);
+        printf("  String entries offset: %"PRId64"\n", header->internal.string_entries_offset);
+        printf("  String entries size: %"PRId64"\n", header->internal.string_entries_size);
+        printf("  Keys offset: %"PRId64"\n", header->internal.keys_offset);
+        printf("  Values offset: %"PRId64"\n", header->internal.values_offset);
+        printf("String entries (%d):\n", header->num_string_entries);
+        for (int i = 0; i < header->num_string_entries; i++) {
+            if (cnwn_file_seek(f, header->string_entries[i].offset) >= 0) {
+                char tmps[1024];
+                int64_t size = CNWN_MIN(header->string_entries[i].size + 1, sizeof(tmps));
+                int sret = cnwn_file_read_string(f, size, tmps);
+                if (sret >= 0) 
+                    printf("  %d = '%s'\n", i, tmps);
+                else
+                    fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
+            } else
+                fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
+        }
+        printf("Resource entries (%d):\n", header->num_resource_entries);
+        for (int i = 0; i < header->num_resource_entries; i++) {
+            printf("  %d = %s offset=%"PRId64", size=%"PRId64"\n",
+                   i,
+                   header->resource_entries[i].filename,
+                   header->resource_entries[i].offset,
+                   header->resource_entries[i].size);
+        }
+        printf("Resources total size: %"PRId64"\n", cnwn_erf_header_sum_resources(header));
+        cnwn_erf_header_free(header);
+    } else
+        fprintf(stderr, "ERROR: %s\n", cnwn_get_error());
+    cnwn_file_close(f);
     return 0;
 }

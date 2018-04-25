@@ -1,4 +1,4 @@
-// #include "cnwn/resource.h"
+#include "cnwn/resource.h"
 
 int main(int argc, char * argv[])
 {

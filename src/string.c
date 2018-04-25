@@ -338,6 +338,19 @@ bool cnwn_strendswith(const char * s, const char * sub)
     return (slen > 0 && sublen > 0 && cnwn_strncmp(s + slen - sublen, sub, sublen) == 0);
 }
 
+bool cnwn_strstartswithi(const char * s, const char * sub)
+{
+    int sublen = cnwn_strlen(sub);
+    return (sublen > 0 && cnwn_strncmpi(s, sub, sublen) == 0);
+}
+
+bool cnwn_strendswithi(const char * s, const char * sub)
+{
+    int slen = cnwn_strlen(s);
+    int sublen = cnwn_strlen(sub);
+    return (slen > 0 && sublen > 0 && cnwn_strncmpi(s + slen - sublen, sub, sublen) == 0);
+}
+
 int cnwn_strfind(const char * s, int index, const char * sub, const char * esc)
 {
     int slen = cnwn_strlen(s);

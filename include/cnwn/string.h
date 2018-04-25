@@ -210,6 +210,22 @@ extern CNWN_PUBLIC bool cnwn_strstartswith(const char * s, const char * sub);
 extern CNWN_PUBLIC bool cnwn_strendswith(const char * s, const char * sub);
 
 /**
+ * Check if a string starts with a substring, case insensetive.
+ * @param s The string to check.
+ * @param sub The substring to check for.
+ * @returns True if the string starts with the substring, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strstartswithi(const char * s, const char * sub);
+
+/**
+ * Check if a string ends with a substring, case insensetive..
+ * @param s The string to check.
+ * @param sub The substring to check for.
+ * @returns True if the string ends with the substring, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strendswithi(const char * s, const char * sub);
+
+/**
  * Find a substring.
  * @param s The string to find substrings in.
  * @param index Where in @p s to start searching for @p sub.

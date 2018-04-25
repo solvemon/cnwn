@@ -540,6 +540,85 @@ int64_t cnwn_file_read_fixed(cnwn_File * f, int64_t size, void * ret_buffer)
     return rret;
 }
 
+int64_t cnwn_file_read_string(cnwn_File * f, int max_size, char * ret_string)
+{
+    if (max_size <= 0) {
+        cnwn_set_error("invalid string max size (%d)", max_size);
+        return -1;
+    }
+    int64_t size = max_size - 1;
+    if (size <= 0) {
+        if (ret_string != NULL)
+            ret_string[0] = 0;
+        return 0;
+    }
+    uint8_t tmpbuffer[CNWN_FILE_BUFFER_SIZE];
+    int64_t ret = 0;
+    int soffset = 0;
+    for (int i = 0; i < size / CNWN_FILE_BUFFER_SIZE; i++) {
+        ssize_t rret = read(f->fd, tmpbuffer, CNWN_FILE_BUFFER_SIZE);
+        if (rret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        if (ret_string != NULL)
+            for (int j = 0; j < rret; j++)
+                ret_string[soffset++] = tmpbuffer[j];
+        ret += rret;
+    }
+    if (size % CNWN_FILE_BUFFER_SIZE) {
+        ssize_t rret = read(f->fd, tmpbuffer, size % CNWN_FILE_BUFFER_SIZE);
+        if (rret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        if (ret_string != NULL)
+            for (int j = 0; j < rret; j++)
+                ret_string[soffset++] = tmpbuffer[j];
+        ret += rret;
+    }
+    if (ret_string != NULL)
+        ret_string[soffset] = 0;
+    return ret;
+}
+
+int64_t cnwn_file_write_string(cnwn_File * f, const char * string)
+{
+    int size = cnwn_strlen(string);
+    if (size <= 0)
+        return 0;
+    uint8_t tmpbuffer[CNWN_FILE_BUFFER_SIZE];
+    if (string == NULL)
+        memset(tmpbuffer, 0, sizeof(tmpbuffer));
+    int64_t ret = 0;
+    int soffset = 0;
+    for (int i = 0; i < size / CNWN_FILE_BUFFER_SIZE; i++) {
+        if (string != NULL)
+            for (int j = 0; j < CNWN_FILE_BUFFER_SIZE; j++)
+                tmpbuffer[j] = string[soffset++];
+        ssize_t rret = write(f->fd, tmpbuffer, CNWN_FILE_BUFFER_SIZE);
+        if (rret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        else
+            soffset += rret;
+        ret += rret;
+    }
+    if (size % CNWN_FILE_BUFFER_SIZE) {
+        if (string != NULL)
+            for (int j = 0; j < CNWN_FILE_BUFFER_SIZE; j++)
+                tmpbuffer[j] = string[soffset++];
+        ssize_t rret = write(f->fd, tmpbuffer, size % CNWN_FILE_BUFFER_SIZE);
+        if (rret < 0) {
+            cnwn_set_error("%s", strerror(errno));
+            return -1;
+        }
+        ret += rret;
+    }
+    return ret;
+}
+
 int64_t cnwn_file_read64(cnwn_File * f, int64_t * ret_i)
 {
     uint8_t buffer[8];
@@ -613,7 +692,91 @@ int64_t cnwn_file_read16(cnwn_File * f, int16_t * ret_i)
 int64_t cnwn_file_write16(cnwn_File * f, int16_t i)
 {
     uint8_t buffer[2];
-    *((int32_t *)buffer) = i;
+    *((int16_t *)buffer) = i;
+    int64_t rret = cnwn_file_write(f, 2, buffer);
+    if (rret < 0)
+        return -1;
+    if (rret != 2) {
+        cnwn_set_error("wrong size");
+        return -1;
+    }
+    return rret;
+}
+
+int64_t cnwn_file_readu64(cnwn_File * f, uint64_t * ret_i)
+{
+    uint8_t buffer[8];
+    int64_t rret = cnwn_file_read(f, 8, buffer);
+    if (rret < 0)
+        return -1;
+    if (rret != 8) {
+        cnwn_set_error("wrong size");
+        return -1;
+    }
+    *ret_i = *((uint64_t *)buffer);
+    return rret;
+}
+
+int64_t cnwn_file_writeu64(cnwn_File * f, uint64_t i)
+{
+    uint8_t buffer[8];
+    *((uint64_t *)buffer) = i;
+    int64_t rret = cnwn_file_write(f, 8, buffer);
+    if (rret < 0)
+        return -1;
+    if (rret != 8) {
+        cnwn_set_error("wrong size");
+        return -1;
+    }
+    return rret;
+}
+
+int64_t cnwn_file_readu32(cnwn_File * f, uint32_t * ret_i)
+{
+    uint8_t buffer[4];
+    int64_t rret = cnwn_file_read(f, 4, buffer);
+    if (rret < 0)
+        return -1;
+    if (rret != 4) {
+        cnwn_set_error("wrong size");
+        return -1;
+    }
+    *ret_i = *((uint32_t *)buffer);
+    return rret;
+}
+        
+int64_t cnwn_file_writeu32(cnwn_File * f, uint32_t i)
+{
+    uint8_t buffer[4];
+    *((uint32_t *)buffer) = i;
+    int64_t rret = cnwn_file_write(f, 4, buffer);
+    if (rret < 0)
+        return -1;
+    if (rret != 4) {
+        cnwn_set_error("wrong size");
+        return -1;
+    }
+    return rret;
+}
+
+int64_t cnwn_file_readu16(cnwn_File * f, uint16_t * ret_i)
+{
+    uint8_t buffer[2];
+    int64_t rret = cnwn_file_read(f, 2, buffer);
+    if (rret < 0)
+        return -1;
+    if (rret != 2) {
+        cnwn_set_error("wrong size");
+        return -1;
+    }
+    *ret_i = *((uint16_t *)buffer);
+    return rret;
+}
+
+int64_t cnwn_file_writeu16(cnwn_File * f, uint16_t i)
+{
+    uint8_t buffer[2];
+    *((uint16_t *)buffer) = i;
     int64_t rret = cnwn_file_write(f, 2, buffer);
     if (rret < 0)
         return -1;
