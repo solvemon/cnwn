@@ -25,7 +25,7 @@ int16_t cnwn_endian_swap16(int16_t i)
     return ((i >> 8) | ((i & 0xff) << 8));
 }
 
-int64_t cnwn_endian_big64(int64_t i)
+int64_t cnwn_endian_btoh64(int64_t i)
 {
 #ifdef BUILD_BIG_ENDIAN
     return i;
@@ -41,7 +41,7 @@ int64_t cnwn_endian_big64(int64_t i)
 #endif
 }
 
-int32_t cnwn_endian_big32(int32_t i)
+int32_t cnwn_endian_btoh32(int32_t i)
 {
 #ifdef BUILD_BIG_ENDIAN
     return i;
@@ -53,7 +53,7 @@ int32_t cnwn_endian_big32(int32_t i)
 #endif
 }
 
-int16_t cnwn_endian_big16(int16_t i)
+int16_t cnwn_endian_btoh16(int16_t i)
 {
 #ifdef BUILD_BIG_ENDIAN
     return i;
@@ -62,7 +62,7 @@ int16_t cnwn_endian_big16(int16_t i)
 #endif
 }
 
-int64_t cnwn_endian_little64(int64_t i)
+int64_t cnwn_endian_ltoh64(int64_t i)
 {
 #ifdef BUILD_BIG_ENDIAN
     return ((i >> 56)
@@ -78,7 +78,7 @@ int64_t cnwn_endian_little64(int64_t i)
 #endif
 }
 
-int32_t cnwn_endian_little32(int32_t i)
+int32_t cnwn_endian_ltoh32(int32_t i)
 {
 #ifdef BUILD_BIG_ENDIAN
     return ((i >> 24)
@@ -90,7 +90,7 @@ int32_t cnwn_endian_little32(int32_t i)
 #endif
 }
 
-int16_t cnwn_endian_little16(int16_t i)
+int16_t cnwn_endian_ltoh16(int16_t i)
 {
 #ifdef BUILD_BIG_ENDIAN
     return ((i >> 8) | ((i & 0xff) << 8));

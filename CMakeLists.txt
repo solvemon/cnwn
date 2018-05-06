@@ -54,12 +54,11 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/string.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/path.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/file_system.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/regexp.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/options.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource_type.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/regexp.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/tool_erf.c
+#  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   )
 
 
@@ -70,10 +69,10 @@ set_target_properties(cnwn-shared PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPU
 add_library(cnwn-static STATIC ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-if(BUILD_TOOLS)
-  add_executable(cnwn-erf src/cnwn-erf.c)
-  target_link_libraries(cnwn-erf cnwn-static)
-endif()
+# if(BUILD_TOOLS)
+#   add_executable(cnwn-erf src/cnwn-erf.c)
+#   target_link_libraries(cnwn-erf cnwn-static)
+# endif()
 
 if(BUILD_TESTS)
   add_executable(test-string tests/test-string.c)
@@ -84,8 +83,6 @@ if(BUILD_TESTS)
   target_link_libraries(test-file_system cnwn-shared)
   add_executable(test-options tests/test-options.c)
   target_link_libraries(test-options cnwn-shared)
-  add_executable(test-erf tests/test-erf.c)
-  target_link_libraries(test-erf cnwn-shared)
   add_executable(test-resource tests/test-resource.c)
   target_link_libraries(test-resource cnwn-shared)
 endif()

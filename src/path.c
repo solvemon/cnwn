@@ -84,32 +84,32 @@ int cnwn_path_extensionpart(char * r, int max_size, const char * path)
     return 0;
 }
 
-int cnwn_path_extensionparts(const char * path, int max_extension_size, char * ret_extension, int max_subextension_size, char * ret_subextension)
-{
-    int ret = 0;
-    int index = cnwn_strrfind(path, -1, CNWN_PATH_SEPARATOR, CNWN_PATH_ESCAPE);
-    if (index < 0)
-        index = 0;
-    else
-        index++;
-    int index2 = cnwn_strrfind(path + index, -1, ".", NULL);
-    if (index2 >= 0) {
-        if (cnwn_strcpy(ret_extension, max_extension_size, path + index + index2 + 1, -1) > 0)
-            ret++;
-        if (index2 > 0) {
-            int index3 = cnwn_strrfind(path + index, index2 - 1, ".", NULL);
-            if (index3 >= 0 && cnwn_strcpy(ret_subextension, max_subextension_size, path + index + index3 + 1, index2 - index3 - 1) > 0)
-                ret++;
-        } else if (ret_subextension != NULL && max_subextension_size > 0)
-            ret_subextension[0] = 0;
-    } else {
-        if (ret_extension != NULL && max_extension_size > 0)
-            ret_extension[0] = 0;
-        if (ret_subextension != NULL && max_subextension_size > 0)
-            ret_subextension[0] = 0;
-    }
-    return ret;
-}
+// int cnwn_path_extensionparts(const char * path, int max_extension_size, char * ret_extension, int max_subextension_size, char * ret_subextension)
+// {
+//     int ret = 0;
+//     int index = cnwn_strrfind(path, -1, CNWN_PATH_SEPARATOR, CNWN_PATH_ESCAPE);
+//     if (index < 0)
+//         index = 0;
+//     else
+//         index++;
+//     int index2 = cnwn_strrfind(path + index, -1, ".", NULL);
+//     if (index2 >= 0) {
+//         if (cnwn_strcpy(ret_extension, max_extension_size, path + index + index2 + 1, -1) > 0)
+//             ret++;
+//         if (index2 > 0) {
+//             int index3 = cnwn_strrfind(path + index, index2 - 1, ".", NULL);
+//             if (index3 >= 0 && cnwn_strcpy(ret_subextension, max_subextension_size, path + index + index3 + 1, index2 - index3 - 1) > 0)
+//                 ret++;
+//         } else if (ret_subextension != NULL && max_subextension_size > 0)
+//             ret_subextension[0] = 0;
+//     } else {
+//         if (ret_extension != NULL && max_extension_size > 0)
+//             ret_extension[0] = 0;
+//         if (ret_subextension != NULL && max_subextension_size > 0)
+//             ret_subextension[0] = 0;
+//     }
+//     return ret;
+// }
 
 char ** cnwn_path_split(const char * path, int max_splits)
 {

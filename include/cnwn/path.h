@@ -80,32 +80,13 @@ extern CNWN_PUBLIC int cnwn_path_basepart(char * r, int max_size, const char * p
 extern CNWN_PUBLIC int cnwn_path_filenamepart(char * r, int max_size, const char * path);
 
 /**
- * Get the filename extension part.
+ * Get the filename extension part (everything after the first filename dot).
  * @param[out] r Return the filename extension part here, NULL to get the required length.
  * @param max_size The maximum size of the return string (including zero terminator).
  * @param path The path to get the filename part from.
  * @returns The length of the filename extension part (excluding zero terminator).
  */
 extern CNWN_PUBLIC int cnwn_path_extensionpart(char * r, int max_size, const char * path);
-
-/**
- * Get double filename extension parts (used for things like tar.gz or ico.xml etc).
- * @param path The path to get the filename extension parts from.
- * @param max_extension_size The maximum size of the extension (including zero terminator).
- * @param[out] ret_extension Return the most significant (first from the right) filename extension part here, NULL to get the required length.
- * @param max_subextension_size The maximum size of the subextension (including zero terminator).
- * @param[out] ret_subextension Return the lest significant (second from the right) filename extension part here, NULL to get the required length.
- * @returns The number of filename extensions found.
- *
- * - The (main) filename extension is the most signifcant (first found from the right) and will be returned in @p ret_extension.
- * - The subsequence filename extension is the lest signifcant (second found from the right) and will be returned in @p ret_subextension.
- * - Empty strings are returned for 
- *
- * For examples, "filename.tar.gz" then "gz" is returned in @p ret_extension and "tar" in @p ret_subextension.
- *
- * We do not handle triple extension, mate!
- */
-extern CNWN_PUBLIC int cnwn_path_extensionparts(const char * path, int max_extension_size, char * ret_extension, int max_subextension_size, char * ret_subextension);
 
 /**
  * Split a path into a NULL terminated array of strings.

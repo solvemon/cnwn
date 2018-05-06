@@ -1,7 +1,6 @@
 #include "cnwn/resource_type.h"
 
-const cnwn_ResourceDefinition CNWN_DEFINED_RESOURCES[CNWN_MAX_RESOURCE_TYPE] = {
-    {"", -1, ""},
+const cnwn_ResourceTypeInfo CNWN_RESOURCE_TYPE_INFOS[] = {
     {"res", 0, ""},
     {"bmp", 1, "bitmap image"},
     {"mve", 2, ""},
@@ -112,30 +111,101 @@ const cnwn_ResourceDefinition CNWN_DEFINED_RESOURCES[CNWN_MAX_RESOURCE_TYPE] = {
     {"ids", 9996, ""},
     {"erf", 9997, "ERF"},
     {"bif", 9998, ""},
-    {"key", 9999, ""}
+    {"key", 9999, ""},
+    {"", -1, ""} // Sentinel
 };
 
-cnwn_ResourceType cnwn_resource_type_from_internal_type(int internal_type)
+static cnwn_ResourceTypeInfo invalid_info = {"", -1, ""};
+
+const cnwn_ResourceTypeInfo * cnwn_resource_type_info(cnwn_ResourceType resource_type)
 {
-    if (internal_type < 0 || internal_type > 9999)
-        return CNWN_RESOURCE_TYPE_NONE;
-    for (cnwn_ResourceType rt = CNWN_RESOURCE_TYPE_NONE + 1; rt < CNWN_MAX_RESOURCE_TYPE; rt++) 
-        if (CNWN_DEFINED_RESOURCES[rt].internal_type == internal_type)
-            return rt;
-    return CNWN_RESOURCE_TYPE_NONE;
+    for (int i = 0; i < CNWN_MAX_RESOURCE_TYPE && CNWN_RESOURCE_TYPE_INFOS[i].type >= 0 && CNWN_RESOURCE_TYPE_INFOS[i].type < CNWN_MAX_RESOURCE_TYPE; i++) 
+        if (CNWN_RESOURCE_TYPE_INFOS[i].type == resource_type)
+            return CNWN_RESOURCE_TYPE_INFOS + i;
+    return &invalid_info;
 }
 
-cnwn_ResourceType cnwn_resource_type_from_extension(const char * path)
+
+cnwn_ResourceType cnwn_resource_type_from_path(const char * path)
 {
-    if (path == NULL || path[0] == 0)
-        return CNWN_RESOURCE_TYPE_NONE;
-    char tmps[CNWN_PATH_MAX_SIZE];
-    int len = cnwn_path_extensionpart(tmps, sizeof(tmps), path);
-    if (len <= 0)
-        len = cnwn_path_basepart(tmps, sizeof(tmps), path);
-    if (len > 0)
-        for (cnwn_ResourceType rt = CNWN_RESOURCE_TYPE_NONE + 1; rt < CNWN_MAX_RESOURCE_TYPE; rt++) 
-            if (cnwn_strcmpi(tmps, CNWN_DEFINED_RESOURCES[rt].extension) == 0) 
-                return rt;
-    return CNWN_RESOURCE_TYPE_NONE;
+    char extension[CNWN_PATH_MAX_SIZE];
+    cnwn_path_extensionpart(extension, sizeof(extension), path);
+    cnwn_path_filenamepart(extension, sizeof(extension), extension);
+    for (int i = 0; i < CNWN_MAX_RESOURCE_TYPE && CNWN_RESOURCE_TYPE_INFOS[i].type >= 0 && CNWN_RESOURCE_TYPE_INFOS[i].type < CNWN_MAX_RESOURCE_TYPE; i++) 
+        if (cnwn_strcmpi(CNWN_RESOURCE_TYPE_INFOS[i].extension, extension) == 0)
+            return i;
+    return CNWN_RESOURCE_TYPE_INVALID;
+}
+
+void cnwn_localized_string_init(cnwn_LocalizedString * localized_string, int language_id, const char * text)
+{
+    memset(localized_string, 0, sizeof(cnwn_LocalizedString));
+    localized_string->language_id = language_id;
+    localized_string->text = cnwn_strdup(text != NULL ? text : "");
+}
+
+int64_t cnwn_localized_string_init_from_file(cnwn_LocalizedString * localized_string, cnwn_File * f)
+{
+    int64_t bytes = 0;
+    int32_t language_id;
+    int32_t size;
+    int64_t ret;
+    ret = cnwn_file_read32(f, &language_id);
+    if (ret < 0) {
+        cnwn_set_error("%s (%s)", cnwn_get_error(), "reading language id");
+        return -1;
+    }
+    bytes += ret;
+    ret = cnwn_file_read32(f, &size);
+    if (ret < 0) {
+        cnwn_set_error("%s (%s)", cnwn_get_error(), "reading size");
+        return -1;
+    }
+    if (size > 0) {
+        char * text = malloc(sizeof(char) * (size + 1));
+        ret = cnwn_file_read_string(f, size, text);        
+        if (ret < 0) {
+            cnwn_set_error("%s (%s)", cnwn_get_error(), "reading text");
+            free(text);
+            return -1;
+        }
+        cnwn_localized_string_init(localized_string, language_id, text);
+        free(text);
+    } else
+        cnwn_localized_string_init(localized_string, language_id, "");
+    return ret;
+}
+
+void cnwn_localized_string_deinit(cnwn_LocalizedString * localized_string)
+{
+    if (localized_string != NULL && localized_string->text != NULL)
+        free(localized_string->text);
+}
+
+int64_t cnwn_localized_string_write(const cnwn_LocalizedString * localized_string, cnwn_File * f)
+{
+    int64_t bytes = 0;
+    int64_t ret;
+    int textlen = cnwn_strlen(localized_string->text);
+    ret = cnwn_file_write32(f, localized_string->language_id);
+    if (ret < 0) {
+        cnwn_set_error("%s (%s)", cnwn_get_error(), "writing language id");
+        return -1;
+    }
+    bytes += ret;
+    ret = cnwn_file_write32(f, localized_string->language_id);
+    if (ret < 0) {
+        cnwn_set_error("%s (%s)", cnwn_get_error(), "writing size");
+        return -1;
+    }
+    bytes += ret;
+    if (textlen > 0) {
+        ret = cnwn_file_write_string(f, localized_string->text);
+        if (ret < 0) {
+            cnwn_set_error("%s (%s)", cnwn_get_error(), "writing text");
+            return -1;
+        }
+        bytes += ret;
+    }
+    return ret;
 }

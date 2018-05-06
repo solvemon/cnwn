@@ -9,7 +9,7 @@ void test_clean(const char * path)
 
 void test_parts(const char * path)
 {
-    char tmps[CNWN_PATH_MAX_SIZE], tmps2[CNWN_PATH_MAX_SIZE];
+    char tmps[CNWN_PATH_MAX_SIZE];
     int ret;
     printf("'%s'\n", path);
     ret = cnwn_path_directorypart(tmps, sizeof(tmps), path);
@@ -20,8 +20,6 @@ void test_parts(const char * path)
     printf("    filename => '%s' (%d)\n", tmps, ret);
     ret = cnwn_path_extensionpart(tmps, sizeof(tmps), path);
     printf("    extension => '%s' (%d)\n", tmps, ret);
-    ret = cnwn_path_extensionparts(path, sizeof(tmps), tmps, sizeof(tmps2), tmps2);
-    printf("    extension parts => '%s' and '%s' (%d)\n", tmps, tmps2, ret);
 }
 
 

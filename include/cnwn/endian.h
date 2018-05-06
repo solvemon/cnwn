@@ -33,52 +33,48 @@ extern CNWN_PUBLIC int32_t cnwn_endian_swap32(int32_t i);
 extern CNWN_PUBLIC int16_t cnwn_endian_swap16(int16_t i);
 
 /**
- * Ensure that a 64-bit integer is big endian.
- * @param i The integer to possibly byte swap.
- * @return The possibly swapped integer.
- * @note On big endian hosts this does nothing.
+ * Swap endian of a 64-bit integer from little to whatever the host is using.
+ * @param i The integer to byte swap.
+ * @return The swapped integer.
+ * @note
  */
-extern CNWN_PUBLIC int64_t cnwn_endian_big64(int64_t i);
+extern CNWN_PUBLIC int64_t cnwn_endian_ltoh64(int64_t i);
 
 /**
- * Ensure that a 32-bit integer is big endian.
- * @param i The integer to possibly byte swap.
- * @return The possibly swapped integer.
- * @note On big endian hosts this does nothing.
+ * Swap endian of a 32-bit integer from little to whatever the host is using.
+ * @param i The integer to byte swap.
+ * @return The swapped integer.
  */
-extern CNWN_PUBLIC int32_t cnwn_endian_big32(int32_t i);
+extern CNWN_PUBLIC int32_t cnwn_endian_ltoh32(int32_t i);
 
 /**
- * Ensure that a 16-bit integer is big endian.
- * @param i The integer to possibly byte swap.
- * @return The possibly swapped integer.
- * @note On big endian hosts this does nothing.
+ * Swap endian of a 16-bit integer from little to whatever the host is using.
+ * @param i The integer to byte swap.
+ * @return The swapped integer.
  */
-extern CNWN_PUBLIC int16_t cnwn_endian_big16(int16_t i);
+extern CNWN_PUBLIC int16_t cnwn_endian_ltoh16(int16_t i);
 
 /**
- * Ensure that a 64-bit integer is little endian.
- * @param i The integer to possibly byte swap.
- * @return The possibly swapped integer.
- * @note On little endian hosts this does nothing.
+ * Swap endian of a 64-bit integer from big to whatever the host is using.
+ * @param i The integer to byte swap.
+ * @return The swapped integer.
+ * @note
  */
-extern CNWN_PUBLIC int64_t cnwn_endian_little64(int64_t i);
+extern CNWN_PUBLIC int64_t cnwn_endian_btoh64(int64_t i);
 
 /**
- * Ensure that a 32-bit integer is little endian.
- * @param i The integer to possibly byte swap.
- * @return The possibly swapped integer.
- * @note On little endian hosts this does nothing.
+ * Swap endian of a 32-bit integer from big to whatever the host is using.
+ * @param i The integer to byte swap.
+ * @return The swapped integer.
  */
-extern CNWN_PUBLIC int32_t cnwn_endian_little32(int32_t i);
+extern CNWN_PUBLIC int32_t cnwn_endian_btoh32(int32_t i);
 
 /**
- * Ensure that a 16-bit integer is little endian.
- * @param i The integer to possibly byte swap.
- * @return The possibly swapped integer.
- * @note On little endian hosts this does nothing.
+ * Swap endian of a 16-bit integer from big to whatever the host is using.
+ * @param i The integer to byte swap.
+ * @return The swapped integer.
  */
-extern CNWN_PUBLIC int16_t cnwn_endian_little16(int16_t i);
+extern CNWN_PUBLIC int16_t cnwn_endian_btoh16(int16_t i);
 
 
 #ifdef __cplusplus
