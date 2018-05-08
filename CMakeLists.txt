@@ -54,6 +54,8 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/string.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/path.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/file_system.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/hash.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/containers.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/regexp.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/options.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource_type.c

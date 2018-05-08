@@ -90,6 +90,30 @@ extern CNWN_PUBLIC char * cnwn_strdup(const char * s);
 extern CNWN_PUBLIC char * cnwn_strndup(const char * s, int n);
 
 /**
+ * Duplicate a string, but limit to max @p n chars.
+ * @param s The string to duplicate.
+ * @param i The index of where to start the duplication.
+ * @param n Limit the number of chars to duplicate or a negative value for the remainder of the string after index @p i.
+ * @returns The duplicated string or NULL if @p s is NULL.
+ */
+extern CNWN_PUBLIC char * cnwn_strndup2(const char * s, int i, int n);
+
+/**
+ * Allocate a new string to accomodate format.
+ * @param format The format.
+ * @param args The variable arguments for the format.
+ * @returns The newly allocated and formatted string.
+ */
+extern CNWN_PUBLIC char * cnwn_strformat_va(const char * format, va_list args);
+
+/**
+ * Allocate a new string to accomodate format.
+ * @param format The format.
+ * @returns The newly allocated and formatted string.
+ */
+extern CNWN_PUBLIC char * cnwn_strformat(const char * format, ...) CNWN_PRINTF(1, 2);
+
+/**
  * Copy a string to another.
  * @param r Write result string here, pass NULL to get the required length.
  * @param max_size The maximum size of the return string including the zero terminator.
@@ -209,7 +233,7 @@ extern CNWN_PUBLIC bool cnwn_strendswith(const char * s, const char * sub);
 extern CNWN_PUBLIC bool cnwn_strstartswithi(const char * s, const char * sub);
 
 /**
- * Check if a string ends with a substring, case insensetive..
+ * Check if a string ends with a substring, case insensetive.
  * @param s The string to check.
  * @param sub The substring to check for.
  * @returns True if the string ends with the substring, false if not.
@@ -326,6 +350,88 @@ extern CNWN_PUBLIC int cnwn_strunescape(char * r, int max_size, const char * s, 
  * @returns The length of the return string (excluding zero terminator).
  */
 extern CNWN_PUBLIC int cnwn_strnoctl(char * r, int max_size, const char * s);
+
+/**
+ * Insert a string into another string.
+ * @param r Write the return string here, pass NULL to get the required length.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param s The string to insert into.
+ * @param index The index of where to insert the string, negative values will wrap from the end of the string.
+ * @param format The format of the string to insert.
+ * @param args The variable arguments for the format.
+ * @returns The length of the return string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_strinsert_va(char * r, int max_size, const char * s, int index, const char * format, va_list args);
+
+/**
+ * Insert a string into another string.
+ * @param r Write the return string here, pass NULL to get the required length.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param s The string to insert into.
+ * @param index The index of where to insert the string, negative values will wrap from the end of the string.
+ * @param format The format of the string to insert.
+ * @returns The length of the return string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_strinsert(char * r, int max_size, const char * s, int index, const char * format, ...) CNWN_PRINTF(5, 6);
+
+/**
+ * Insert a string into another string, realloc and return the new string.
+ * @param s The string to insert into, will be reallocated.
+ * @param index The index of where to insert the string, negative values will wrap from the end of the string.
+ * @param format The format of the string to insert.
+ * @param args The variable arguments for the format.
+ * @returns The reallocated version of @p s with the formatted string inserted.
+ */
+extern CNWN_PUBLIC char * cnwn_strinsert_realloc_va(char * s, int index, const char * format, va_list args);
+
+/**
+ * Insert a string into another string, realloc and return the new string.
+ * @param s The string to insert into, will be reallocated.
+ * @param index The index of where to insert the string, negative values will wrap from the end of the string.
+ * @param format The format of the string to insert.
+ * @returns The reallocated version of @p s with the formatted string inserted.
+ */
+extern CNWN_PUBLIC char * cnwn_strinsert_realloc(char * s, int index, const char * format, ...) CNWN_PRINTF(3, 4);
+
+/**
+ * Append a string to another string.
+ * @param r Write the return string here, pass NULL to get the required length.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param s The string to append into.
+ * @param format The format of the string to append.
+ * @param args The variable arguments for the format.
+ * @returns The length of the return string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_strappend_va(char * r, int max_size, const char * s, const char * format, va_list args);
+
+/**
+ * Append a string to another string.
+ * @param r Write the return string here, pass NULL to get the required length.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param s The string to append into.
+ * @param format The format of the string to append.
+ * @returns The length of the return string (excluding zero terminator).
+ */
+extern CNWN_PUBLIC int cnwn_strappend(char * r, int max_size, const char * s, const char * format, ...) CNWN_PRINTF(4, 5);
+
+/**
+ * Append a string to another string, realloc and return the new string.
+ * @param s The string to append into, will be reallocated.
+ * @param index The index of where to append the string, negative values will wrap from the end of the string.
+ * @param format The format of the string to append.
+ * @param args The variable arguments for the format.
+ * @returns The reallocated version of @p s with the formatted string appended.
+ */
+extern CNWN_PUBLIC char * cnwn_strappend_realloc_va(char * s, const char * format, va_list args);
+
+/**
+ * Append a string to another string, realloc and return the new string.
+ * @param s The string to append into, will be reallocated.
+ * @param index The index of where to append the string, negative values will wrap from the end of the string.
+ * @param format The format of the string to append.
+ * @returns The reallocated version of @p s with the formatted string appended.
+ */
+extern CNWN_PUBLIC char * cnwn_strappend_realloc(char * s, const char * format, ...) CNWN_PRINTF(2, 3);
 
 /**
  * Split a string into a NULL terminated array of strings.

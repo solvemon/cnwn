@@ -49,7 +49,11 @@ bool cnwn_path_isfiledirectory(const char * path)
 int cnwn_path_directorypart(char * r, int max_size, const char * path)
 {
     int index = cnwn_strrfind(path, -1, CNWN_PATH_SEPARATOR, CNWN_PATH_ESCAPE);
-    return cnwn_strcpy(r, max_size, path, index);
+    if (index >= 0)
+        return cnwn_strcpy(r, max_size, path, index);
+    if (r != NULL && max_size > 0)
+        r[0] = 0;
+    return 0;
 }
 
 int cnwn_path_basepart(char * r, int max_size, const char * path)

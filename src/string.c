@@ -148,6 +148,47 @@ char * cnwn_strndup(const char * s, int n)
     return NULL;
 }
 
+char * cnwn_strndup2(const char * s, int i, int n)
+{
+    int len = cnwn_strlen(s);
+    if (i < len)
+        i += len;
+    char * ret;
+    if (i >= 0 && i < len) {
+        if (i + n > len)
+            n = len - i;
+        ret = malloc(sizeof(char) * (n + 1));
+        if (n > 0)
+            memcpy(ret, s + i, sizeof(char) * n);
+        ret[n] = 0;
+    } else {
+        ret = malloc(sizeof(char));
+        ret[0] = 0;
+    }
+    return ret;
+}
+
+char * cnwn_strformat_va(const char * format, va_list args)
+{
+    va_list argscopy;
+    va_copy(argscopy, args);
+    int len = vsnprintf(NULL, 0, format, argscopy);
+    va_end(argscopy);
+    char * ret = malloc(sizeof(char) * (len + 1));
+    vsnprintf(ret, len + 1, format, args);
+    va_end(args);
+    return ret;
+}
+
+char * cnwn_strformat(const char * format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    char * ret = cnwn_strformat_va(format, args);
+    va_end(args);
+    return ret;
+}
+
 int cnwn_strcpy(char * r, int max_size, const char * s, int len)
 {
     int slen = cnwn_strlen(s);
@@ -502,6 +543,167 @@ int cnwn_strnoctl(char * r, int max_size, const char * s)
     return soffset;
 }
 
+
+int cnwn_strinsert_va(char * r, int max_size, const char * s, int index, const char * format, va_list args)
+{
+    int slen = cnwn_strlen(s);
+    if (index < 0)
+        index += slen;
+    if (index < 0)
+        index = 0;
+    if (index > slen)
+        index = slen;
+    va_list argscopy;
+    va_copy(argscopy, args);
+    int flen = vsnprintf(NULL, 0, format, argscopy);
+    va_end(argscopy);
+    int retlen = slen + flen;
+    if (max_size > 0) {
+        retlen = CNWN_MIN(retlen, max_size - 1);
+        if (r != NULL) {
+            char * tmpformat = malloc(sizeof(char) * (flen + 1));
+            vsnprintf(tmpformat, flen + 1, format, args);
+            char * tmp = malloc(sizeof(char) * (retlen + 1));
+            int copylen = CNWN_MINMAX(index, 0, retlen);
+            if (copylen > 0)
+                memcpy(tmp, s, sizeof(char) * copylen);
+            int copylen2 = CNWN_MINMAX(flen, 0, retlen - copylen);
+            if (copylen2 > 0)
+                memcpy(tmp + copylen, tmpformat, sizeof(char) * copylen2);
+            int copylen3 = CNWN_MINMAX(slen - index, 0, retlen - copylen - copylen2);
+            if (copylen3 > 0)
+                memcpy(tmp + copylen + copylen2, s + index, sizeof(char) * copylen3);
+            free(tmpformat);
+            memcpy(r, tmp, sizeof(char) * retlen);
+            r[retlen] = 0;
+            free(tmp);
+        }
+    }
+    return retlen;
+}
+
+int cnwn_strinsert(char * r, int max_size, const char * s, int index, const char * format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int ret = cnwn_strinsert_va(r, max_size, s, index, format, args);
+    va_end(args);
+    return ret;
+}
+
+char * cnwn_strinsert_realloc_va(char * s, int index, const char * format, va_list args)
+{
+    int slen = cnwn_strlen(s);
+    if (index < 0)
+        index += slen;
+    if (index < 0)
+        index = 0;
+    if (index > slen)
+        index = slen;
+    va_list argscopy;
+    va_copy(argscopy, args);
+    int flen = vsnprintf(NULL, 0, format, argscopy);
+    va_end(argscopy);
+    int retlen = slen + flen;
+    char * tmpformat = malloc(sizeof(char) * (flen + 1));
+    vsnprintf(tmpformat, flen + 1, format, args);
+    char * tmp = malloc(sizeof(char) * (retlen + 1));
+    int copylen = CNWN_MINMAX(index, 0, retlen);
+    if (copylen > 0)
+        memcpy(tmp, s, sizeof(char) * copylen);
+    int copylen2 = CNWN_MINMAX(flen, 0, retlen - copylen);
+    if (copylen2 > 0)
+        memcpy(tmp + copylen, tmpformat, sizeof(char) * copylen2);
+    int copylen3 = CNWN_MINMAX(slen - index, 0, retlen - copylen - copylen2);
+    if (copylen3 > 0)
+        memcpy(tmp + copylen + copylen2, s + index, sizeof(char) * copylen3);
+    free(tmpformat);
+    tmp[retlen] = 0;
+    if (s != NULL)
+        free(s);
+    return tmp;
+}
+
+char * cnwn_strinsert_realloc(char * s, int index, const char * format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    char * ret = cnwn_strinsert_realloc_va(s, index, format, args);
+    va_end(args);
+    return ret;
+}
+
+int cnwn_strappend_va(char * r, int max_size, const char * s, const char * format, va_list args)
+{
+    int slen = cnwn_strlen(s);
+    va_list argscopy;
+    va_copy(argscopy, args);
+    int flen = vsnprintf(NULL, 0, format, argscopy);
+    va_end(argscopy);
+    int retlen = slen + flen;
+    if (max_size > 0) {
+        retlen = CNWN_MIN(retlen, max_size - 1);
+        if (r != NULL) {
+            char * tmpformat = malloc(sizeof(char) * (flen + 1));
+            vsnprintf(tmpformat, flen + 1, format, args);
+            char * tmp = malloc(sizeof(char) * (retlen + 1));
+            int copylen = CNWN_MINMAX(slen, 0, retlen);
+            if (copylen > 0)
+                memcpy(tmp, s, sizeof(char) * copylen);
+            int copylen2 = CNWN_MINMAX(flen, 0, retlen - copylen);
+            if (copylen2 > 0)
+                memcpy(tmp + copylen, tmpformat, sizeof(char) * copylen2);
+            free(tmpformat);
+            memcpy(r, tmp, sizeof(char) * retlen);
+            r[retlen] = 0;
+            free(tmp);
+        }
+    }
+    return retlen;
+}
+
+int cnwn_strappend(char * r, int max_size, const char * s, const char * format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int ret = cnwn_strappend_va(r, max_size, s, format, args);
+    va_end(args);
+    return ret;
+}
+
+char * cnwn_strappend_realloc_va(char * s, const char * format, va_list args)
+{
+    int slen = cnwn_strlen(s);
+    va_list argscopy;
+    va_copy(argscopy, args);
+    int flen = vsnprintf(NULL, 0, format, argscopy);
+    va_end(argscopy);
+    int retlen = slen + flen;
+    char * tmpformat = malloc(sizeof(char) * (flen + 1));
+    vsnprintf(tmpformat, flen + 1, format, args);
+    char * tmp = malloc(sizeof(char) * (retlen + 1));
+    int copylen = CNWN_MINMAX(slen, 0, retlen);
+    if (copylen > 0)
+        memcpy(tmp, s, sizeof(char) * copylen);
+    int copylen2 = CNWN_MINMAX(flen, 0, retlen - copylen);
+    if (copylen2 > 0)
+        memcpy(tmp + copylen, tmpformat, sizeof(char) * copylen2);
+    free(tmpformat);
+    tmp[retlen] = 0;
+    if (s != NULL)
+        free(s);
+    return tmp;
+}
+
+char * cnwn_strappend_realloc(char * s, const char * format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    char * ret = cnwn_strappend_realloc_va(s, format, args);
+    va_end(args);
+    return ret;
+}
+
 char ** cnwn_strsplit(const char * s, int max_splits, const char * sep, const char * esc)
 {
     int count = cnwn_strcount(s, 0, sep, esc);
@@ -596,7 +798,19 @@ int cnwn_strings_len(char ** strings)
     return len;
 }
 
-char ** cnwn_strings_cat(char ** strings, char ** other);
+char ** cnwn_strings_cat(char ** strings, char ** other)
+{
+    int counto = cnwn_strings_len(other);
+    if (counto > 0) {
+        int counts = cnwn_strings_len(strings);
+        char ** ret = realloc(strings, sizeof(char *) * (counto + counts + 1));
+        for (int i = 0; i < counto; i++)
+            ret[i + counts] = other[i];
+        ret[counto + counts] = NULL;
+        return ret;
+    }
+    return strings;
+}
 
 void cnwn_strings_free(char ** strings)
 {

@@ -30,5 +30,13 @@ int main(int argc, char * argv[])
     // test_find("ABC$$$", 5, "$", "!");
     // test_splitjoin("ABC$$$DEF", -1, "$", "!");
     // printf("%d\n", cnwn_strstartswith("ABCDEF", "AD"));
+    // char tmps[1024] = "ABCD";
+    // cnwn_strinsert(tmps, sizeof(tmps), tmps, 2, "*");
+    // cnwn_strappend(tmps, sizeof(tmps), tmps, "*");
+    // printf("'%s'\n", tmps);
+    char * s = cnwn_strdup("ABCD");
+    s = cnwn_strinsert_realloc(s, 2, "*");
+    printf("'%s'\n", s);
+    free(s);
     return 0;
 }
