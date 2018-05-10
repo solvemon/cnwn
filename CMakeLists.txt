@@ -60,7 +60,7 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/options.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource_type.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/resource.c
-#  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/erf.c
   )
 
 
@@ -71,10 +71,10 @@ set_target_properties(cnwn-shared PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPU
 add_library(cnwn-static STATIC ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-# if(BUILD_TOOLS)
-#   add_executable(cnwn-erf src/cnwn-erf.c)
-#   target_link_libraries(cnwn-erf cnwn-static)
-# endif()
+if(BUILD_TOOLS)
+  add_executable(cnwna src/cnwna.c)
+  target_link_libraries(cnwna cnwn-static)
+endif()
 
 if(BUILD_TESTS)
   add_executable(test-string tests/test-string.c)

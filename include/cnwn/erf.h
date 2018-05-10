@@ -6,125 +6,68 @@
 #define CNWN_ERF_H
 
 #include "cnwn/file_system.h"
-#include "cnwn/resource_type.h"
-
-/**
- * Different types of ERF's.
- */
-enum cnwn_ERFType_e {
-
-    /**
-     * Invalid.
-     */
-    CNWN_ERF_TYPE_NONE = 0,
-
-    /**
-     * ERF is ERF!
-     */
-    CNWN_ERF_TYPE_ERF,
-
-    /**
-     * Module.
-     */
-    CNWN_ERF_TYPE_MODULE,
-    
-    /**
-     * Maxe num.
-     */
-    CNWN_MAX_ERF_TYPE
-};
-
-/**
- * @see enum cnwn_ERFType_e
- */
-typedef enum cnwn_ERFType_e cnwn_ERFType;
-
-/**
- * @see struct cnwn_ERFEntry_s
- */
-typedef struct cnwn_ERFEntry_s cnwn_ERFEntry;
-
-/**
- * @see struct cnwn_ERFInfo_s
- */
-typedef struct cnwn_ERFInfo_s cnwn_ERFInfo;
-
-/**
- * An entry in the ERF.
- */
-struct cnwn_ERFEntry_s {
-
-    /**
-     * The key of the entry.
-     */
-    char * key;
-
-    /**
-     * The resource type of the entry.
-     */
-    cnwn_ResourceType resource_type;
-
-    /**
-     * The offset in the file.
-     */
-    int64_t resource_offset;
-
-    /**
-     * The size of the resource.
-     */
-    int64_t resource_size;
-};
-
-/**
- * Represents an ERF file.
- */
-struct cnwn_ERFInfo_s {
-
-    /**
-     * Type.
-     */
-    cnwn_ERFType type;
-
-    /**
-     * Major version.
-     */
-    int major_version;
-    
-    /**
-     * Minor version.
-     */
-    int minor_version;
-
-    /**
-     * The number of localized strings.
-     */
-    int num_localized_strings;
-
-    /**
-     * The localized strings.
-     */
-    cnwn_LocalizedString * localized_strings;
-
-    /**
-     * The number of entries.
-     */
-    int num_entries;
-
-    /**
-     * The entries.
-     */
-    cnwn_ERFEntry * entries;
-};
+#include "cnwn/endian.h"
+#include "cnwn/resource.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * Read an ERF
+ * ERF resource handler.
  */
-extern CNWN_PUBLIC cnwn_ERF * cnwn_erf_read(cnwn_File * f);
+extern CNWN_PUBLIC const cnwn_ResourceHandler CNWN_RESOURCE_HANDLER_ERF;
 
+/**
+ * Default handler for ERF files.
+ * @param resource The resource struct to initialize.
+ * @param size The size of the resource in bytes.
+ * @param f The file, must be set at the correct offset.
+ * @returns Zero on success or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_resource_init_extract_erf(cnwn_Resource * resource, int64_t size, cnwn_File * f);
+
+/**
+ * Default handler for ERF files.
+ * @param resource The resource struct to initialize.
+ * @returns Zero on success or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_resource_init_archive_erf(cnwn_Resource * resource);
+
+/**
+ * Default handler for ERF files.
+ * @param resource Only deinitialize the resource type specific data.
+ */
+extern CNWN_PUBLIC void cnwn_resource_deinit_erf(cnwn_Resource * resource);
+
+/**
+ * Default handler for ERF files.
+ * @param resource The resource to get number of items from.
+ * @returns The number of items.
+ */
+extern CNWN_PUBLIC int cnwn_resource_get_num_items_erf(const cnwn_Resource * resource);
+
+/**
+ * Default handler for ERF files.
+ * @param resource The resource to get item from.
+ * @param index The index of the item, negative values will wrap from the end.
+ * @param[out] ret_item Return the item here.
+ * @returns The number of returned items (will be zero if the resource has no items or @p index is out of range).
+ */
+extern CNWN_PUBLIC int cnwn_resource_get_item_erf(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item);
+
+/**
+ * Default handler for ERF files.
+ * @param resource The resource to extract an item from.
+ * @param index The index of the item, negative values will wrap from the end.
+ * @param source_f The source data of the resource, will be seeked.
+ * @param destination_f Write the extracted item to this file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_extract_item_erf(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f);
 
 #ifdef __cplusplus
 }

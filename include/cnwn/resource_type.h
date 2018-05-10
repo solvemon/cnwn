@@ -8,12 +8,26 @@
 #include "cnwn/file_system.h"
 
 /**
+ * Check if the resource type is ERF compatible.
+ * @param t The resource type.
+ * @returns True or false.
+ */
+#define CNWN_RESOURCE_TYPE_IS_ERF(t) ((t) == CNWN_RESOURCE_TYPE_ERF || (t) == CNWN_RESOURCE_TYPE_HAK || (t) == CNWN_RESOURCE_TYPE_MOD || (t) == CNWN_RESOURCE_TYPE_NWM)
+
+/**
+ * Check if the resource type is a container.
+ * @param t The resource type.
+ * @returns True or false.
+ */
+#define CNWN_RESOURCE_TYPE_IS_CONTAINER(t) (CNWN_RESOURCE_TYPE_IS_ERF(t) || (t) == CNWN_RESOURCE_TYPE_BIF)
+
+/**
  * Resource types.
  */
 enum cnwn_ResourceType_e {
 
     /**
-     * Invalid.
+     * Invalid or unknown.
      */
     CNWN_RESOURCE_TYPE_INVALID = -1,
 

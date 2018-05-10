@@ -341,7 +341,7 @@ int cnwn_strstrip(char * r, int max_size, const char * s)
                 end = i;
                 break;
             }
-        return cnwn_strcpy(r, max_size, s + start, end - start);
+        return cnwn_strcpy(r, max_size, s + start, end - start + 1);
     }
     return cnwn_strcpy(r, max_size, s, -1);
 }

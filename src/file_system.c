@@ -85,6 +85,40 @@ static int cnwn_file_system_ls_recurse(const char * path, bool recurse, char ** 
 #endif
 }
 
+static int cnwn_file_system_ls2_recurse(const char * path, bool recurse, cnwn_StringArray * string_array)
+{
+#ifdef BUILD_WINDOWS_FILE
+#else
+    DIR * dp;
+    struct dirent * ep;
+    dp = opendir(path);
+    if (dp == NULL) {
+        cnwn_set_error("%s", strerror(errno));
+        return -1;
+    }
+    int index = 0;
+    while ((ep = readdir(dp))) {
+        int eplen = cnwn_strlen(ep->d_name);
+        if (eplen > 0 && cnwn_path_isfiledirectory(ep->d_name)) {
+            char tmps[CNWN_PATH_MAX_SIZE];
+            snprintf(tmps, sizeof(tmps), "%s%s%s", path, CNWN_PATH_SEPARATOR, ep->d_name);
+            if (cnwn_file_system_isdirectory(tmps) > 0) {
+                cnwn_string_array_append(string_array, tmps);
+                if (recurse) {
+                    int recret = cnwn_file_system_ls2_recurse(tmps, true, string_array);
+                    if (recret < 0)
+                        return -1;
+                    index += recret;
+                }
+            } else if (cnwn_file_system_isfile(tmps))
+                cnwn_string_array_append(string_array, tmps);
+        }
+    }
+    closedir(dp);
+    return index;
+#endif
+}
+
 char ** cnwn_file_system_ls(const char * path, bool recurse)
 {
     if (path == NULL || path[0] == 0)
@@ -100,6 +134,14 @@ char ** cnwn_file_system_ls(const char * path, bool recurse)
         return NULL;
     }
     return ret;
+}
+
+int cnwn_file_system_ls2(const char * path, bool recurse, cnwn_StringArray * string_array)
+{
+    if (path == NULL || path[0] == 0)
+        path = "."; // FIXME: Maybe different on winblows?
+    int recret = cnwn_file_system_ls2_recurse(path, recurse, string_array);
+    return recret;
 }
 
 int cnwn_file_system_mkdir(const char * path)
@@ -584,9 +626,18 @@ int64_t cnwn_file_read_string(cnwn_File * f, int max_size, char * ret_string)
 
 int64_t cnwn_file_write_string(cnwn_File * f, const char * string)
 {
+    return cnwn_file_write_string2(f, string, -1);
+}
+
+int64_t cnwn_file_write_string2(cnwn_File * f, const char * string, int max_size)
+{
+    if (max_size == 0)
+        return 0;
     int size = cnwn_strlen(string);
     if (size <= 0)
         return 0;
+    if (max_size > 0 && size > max_size)
+        size = max_size;
     uint8_t tmpbuffer[CNWN_FILE_BUFFER_SIZE];
     if (string == NULL)
         memset(tmpbuffer, 0, sizeof(tmpbuffer));
@@ -607,7 +658,7 @@ int64_t cnwn_file_write_string(cnwn_File * f, const char * string)
     }
     if (size % CNWN_FILE_BUFFER_SIZE) {
         if (string != NULL)
-            for (int j = 0; j < CNWN_FILE_BUFFER_SIZE; j++)
+            for (int j = 0; j < size % CNWN_FILE_BUFFER_SIZE; j++)
                 tmpbuffer[j] = string[soffset++];
         ssize_t rret = write(f->fd, tmpbuffer, size % CNWN_FILE_BUFFER_SIZE);
         if (rret < 0) {

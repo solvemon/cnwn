@@ -7,6 +7,7 @@
 
 #include "cnwn/common.h"
 #include "cnwn/path.h"
+#include "cnwn/containers.h"
 
 /**
  * The buffer size to use when doing buffered read/write operations.
@@ -43,6 +44,16 @@ extern CNWN_PUBLIC int cnwn_file_system_count(const char * path, bool recurse);
  * @see cnwn_get_error() if this function returns NULL.
  */
 extern CNWN_PUBLIC char ** cnwn_file_system_ls(const char * path, bool recurse);
+
+/**
+ * List the files and directories in a directory.
+ * @param path Where the directory is, NULL or empty for current working path.
+ * @param recurse True to recurse down into sub directories.
+ * @param string_array Append entries to this array.
+ * @returns A newly allocated string array (should be freed with cnwn_strings_free()) or NULL on error.
+ * @see cnwn_get_error() if this function returns NULL.
+ */
+extern CNWN_PUBLIC int cnwn_file_system_ls2(const char * path, bool recurse, cnwn_StringArray * string_array);
 
 /**
  * Create directories.
@@ -217,8 +228,19 @@ extern CNWN_PUBLIC int64_t cnwn_file_read_string(cnwn_File * f, int max_size, ch
  * @param string The string to write.
  * @returns The number of written bytes or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
+ * @note The zero terminator is not written.
  */
 extern CNWN_PUBLIC int64_t cnwn_file_write_string(cnwn_File * f, const char * string);
+
+/**
+ * Write chars from file.
+ * @param f The file to write to.
+ * @param string The string to write.
+ * @param max_size The maximum number of bytes to write.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_file_write_string2(cnwn_File * f, const char * string, int max_size);
 
 /**
  * Read 64-bit integer from file.

@@ -9,6 +9,17 @@
 #include "cnwn/file_system.h"
 #include "cnwn/resource_type.h"
 #include "cnwn/containers.h"
+//#include "erf.h"
+
+/**
+ * Get a resource handler for a specific type.
+ */
+#define CNWN_RESOURCE_HANDLER(t) ((t) > CNWN_RESOURCE_TYPE_INVALID && (t) < CNWN_MAX_RESOURCE_TYPE ? CNWN_RESOURCE_HANDLERS[(t)] : CNWN_RESOURCE_HANDLER_NONE)
+
+/**
+ * @see struct cnwn_ResourceERF_s
+ */
+typedef struct cnwn_ResourceERF_s cnwn_ResourceERF;
 
 /**
  * @see struct cnwn_Resource_s
@@ -16,14 +27,161 @@
 typedef struct cnwn_Resource_s cnwn_Resource;
 
 /**
- * @see struct cnwn_ResourceIterator_s
+ * @see struct cnwn_Array_s
  */
-typedef struct cnwn_ResourceIterator_s cnwn_ResourceIterator;
+typedef cnwn_Array cnwn_ResourceArray;
 
 /**
- * @see struct cnwn_ResourceIteratorItem_s
+ * @see struct cnwn_ResourceItem_s
  */
-typedef struct cnwn_ResourceIteratorItem_s cnwn_ResourceIteratorItem;
+typedef struct cnwn_ResourceItem_s cnwn_ResourceItem;
+
+/**
+ * @see struct cnwn_ResourceHandler_s
+ */
+typedef struct cnwn_ResourceHandler_s cnwn_ResourceHandler;
+
+/**
+ * Initialize a resource from a file.
+ * @param resource The resource struct to initialize.
+ * @param size The size of the resource in bytes.
+ * @param f The file, must be set at the correct offset.
+ * @returns Zero on success or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+typedef int (*cnwn_ResourceInitExtract)(cnwn_Resource * resource, int64_t size, cnwn_File * f);
+
+/**
+ * Initialize a resource from a path, usually for archiving stuff.
+ * @param resource The resource struct to initialize.
+ * @returns Zero on success or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+typedef int (*cnwn_ResourceInitArchive)(cnwn_Resource * resource);
+
+/**
+ * Used to deinitialize resources.
+ * @param resource Only deinitialize the resource type specific data.
+ */
+typedef void (*cnwn_ResourceDeinit)(cnwn_Resource * resource);
+
+/**
+ * Get the number of items for input/output.
+ * @param resource The resource to get number of items from.
+ * @returns The number of items.
+ */
+typedef int (*cnwn_ResourceGetNumItems)(const cnwn_Resource * resource);
+
+/**
+ * Get an item (a filename that will be used to input/output specific data for the resource).
+ * @param resource The resource to get item from.
+ * @param index The index of the item, negative values will wrap from the end.
+ * @param[out] ret_item Return the item here.
+ * @returns The number of returned items (will be zero if the resource has no items or @p index is out of range).
+ */
+typedef int (*cnwn_ResourceGetItem)(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item);
+
+/**
+ * Extract an item from the resource.
+ * @param resource The resource to extract an item from.
+ * @param index The index of the item, negative values will wrap from the end.
+ * @param source_f The source data of the resource.
+ * @param destination_f Write the extracted item to this file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+typedef int64_t (*cnwn_ResourceExtractItem)(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f);
+
+/**
+ * Extract the resource itself.
+ * @param resource The resource to extract.
+ * @param source_f The source data of the resource.
+ * @param destination_f Write the extracted item to this file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+typedef int64_t (*cnwn_ResourceExtract)(const cnwn_Resource * resource, cnwn_File * source_f, cnwn_File * destination_f);
+
+/***
+ * Represents an ERF (also mod, nwm and hak) file.
+ */
+struct cnwn_ResourceERF_s {
+    
+    /**
+     * The ERF type.
+     */
+    char erf_type[5];
+
+    /**
+     * The type as a number.
+     */
+    uint16_t type;
+
+    /**
+     * The ERF version.
+     */
+    char erf_version[5];
+
+    /**
+     * Major version as a number.
+     */
+    int major_version;
+
+    /**
+     * Minor version as a number.
+     */
+    int minor_version;
+    
+    /**
+     * The number of localized strings.
+     */
+    uint32_t num_localized_strings;
+
+    /**
+     * The localized strings offset.
+     */
+    uint32_t localized_strings_offset;
+
+    /**
+     * The localized strings size.
+     */
+    uint32_t localized_strings_size;
+
+    /**
+     * Keys offset.
+     */
+    uint32_t keys_offset;
+
+    /**
+     * Values offset.
+     */
+    uint32_t values_offset;
+
+    /**
+     * Year.
+     */
+    uint32_t year;
+
+    /**
+     * Day of year.
+     */
+    uint32_t day_of_year;
+
+    /**
+     * Descripting stringref.
+     */
+    uint32_t description_strref;
+    
+    /**
+     * Resources offset.
+     */
+    uint32_t resources_offset;
+
+    /**
+     * The rest of the header.
+     */
+    uint8_t rest[116];
+};
 
 /**
  * A resource.
@@ -34,6 +192,11 @@ struct cnwn_Resource_s {
      * Type.
      */
     cnwn_ResourceType type;
+
+    /**
+     * A parent or NULL if top.
+     */
+    cnwn_Resource * parent;
 
     /**
      * The name.
@@ -51,14 +214,9 @@ struct cnwn_Resource_s {
     int64_t size;
 
     /**
-     * The filenames.
+     * The subresources.
      */
-    cnwn_StringArray filenames;
-
-    /**
-     * The entry filename.
-     */
-    char * entry_filename;
+    cnwn_ResourceArray resources;
 
     /**
      * Resource type specific data.
@@ -66,105 +224,67 @@ struct cnwn_Resource_s {
     union {
 
         /**
-         * ERF (also MOD and HAK).
+         * ERF resource.
          */
-        struct {
-
-            /**
-             * Major version for ERF format.
-             */
-            int major_version;
-
-            /**
-             * Minor version for ERF format.
-             */
-            int minor_version;
-
-            /**
-             * Year.
-             */
-            int year;
-
-            /**
-             * Day of year.
-             */
-            int day_of_year;
-
-            /**
-             * The number of localized strings.
-             */
-            int num_localized_strings;            
-
-            /**
-             * Localized strings offset.
-             */
-            int64_t localized_strings_offset;
-
-            /**
-             * Localized strings size.
-             */
-            int64_t localized_strings_size;
-
-            /**
-             * Keys offset.
-             */
-            int64_t keys_offset;
-
-            /**
-             * Values offset.
-             */
-            int64_t values_offset;
-            
-            /**
-             * The number of subresources in the file.
-             */
-            int num_subresources;
-
-            /**
-             * Subresources.
-             */
-            cnwn_Resource * subresources;
-            
-        } r_erf;
-        
+        cnwn_ResourceERF r_erf;
     } r;
 };
 
 /**
- * Iterate resources.
+ * A resource item.
  */
-struct cnwn_ResourceIterator_s {
+struct cnwn_ResourceItem_s {
 
     /**
-     * The number of resource iterator items.
+     * The filename of the item.
      */
-    int num_items;
-    
+    char filename[CNWN_PATH_MAX_SIZE];
+
     /**
-     * The resource iterator items.
+     * The size of the item.
      */
-    cnwn_ResourceIteratorItem * items;
+    int64_t size;
 };
 
 /**
- * A resource iterator item.
+ * A resource handler
  */
-struct cnwn_ResourceIteratorItem_s {
+struct cnwn_ResourceHandler_s {
 
     /**
-     * The resource.
+     * When initializing from files.
      */
-    const cnwn_Resource * resource;
+    cnwn_ResourceInitExtract f_init_extract;
 
     /**
-     * The index of the resource's filename for this item.
+     *
      */
-    int filename_index;
+    cnwn_ResourceInitArchive f_init_archive;
 
     /**
-     * The path to the file as it related to subresources etc.
+     * When deinitializing.
      */
-    char * path;
+    cnwn_ResourceDeinit f_deinit;
+
+    /**
+     * When getting the number of items.
+     */
+    cnwn_ResourceGetNumItems f_get_num_items;
+
+    /**
+     * When getting an item.
+     */
+    cnwn_ResourceGetItem f_get_item;
+
+    /**
+     * When extracting items from a resource.
+     */
+    cnwn_ResourceExtractItem f_extract_item;
+
+    /**
+     * Extract the resource.
+     */
+    cnwn_ResourceExtract f_extract;
 };
 
 #ifdef __cplusplus
@@ -172,7 +292,17 @@ extern "C" {
 #endif
 
 /**
- * Initialize a resource from a path.
+ * Just a zeroed resource handler.
+ */
+extern CNWN_PUBLIC const cnwn_ResourceHandler CNWN_RESOURCE_HANDLER_NONE;
+
+/**
+ * The resource handlers.
+ */
+extern CNWN_PUBLIC cnwn_ResourceHandler CNWN_RESOURCE_HANDLERS[CNWN_MAX_RESOURCE_TYPE];
+
+/**
+ * Initialize a resource from a file, usually for listing or extracting stuff.
  * @param resource The resource struct to initialize.
  * @param type The type.
  * @param name The name.
@@ -181,7 +311,18 @@ extern "C" {
  * @returns Zero on success or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_resource_init_read_file(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t size, cnwn_File * f);
+extern CNWN_PUBLIC int cnwn_resource_init_extract(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t size, cnwn_File * f);
+
+/**
+ * Initialize a resource from a file, usually for listing or extracting stuff.
+ * @param resource The resource struct to initialize.
+ * @param type The type.
+ * @param name The name.
+ * @param path The path to the file or directory to archive.
+ * @returns Zero on success or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_resource_init_archive(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, const char * path);
 
 /**
  * Deinitialize a resource.
@@ -202,91 +343,66 @@ extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_get_type(const cnwn_Resource 
 extern CNWN_PUBLIC const char * cnwn_resource_get_name(const cnwn_Resource * resource);
 
 /**
- * Get the number of subresources this resource has.
- * @param resource The resource to get subresources from.
- * @returns The number of subresources.
+ * Get the resource filename (name + dot + extension).
+ * @param resource The resource to get the filename from.
+ * @param max_size The maximum size (including zero terminator) of the return string.
+ * @param[out] ret_filename Write filename here, pass NULL to get required string length.
+ * @returns The string length (excluding zero terminator) of the return string.
  */
-extern CNWN_PUBLIC int cnwn_resource_get_num_subresources(const cnwn_Resource * resource);
+extern CNWN_PUBLIC int cnwn_resource_get_filename(const cnwn_Resource * resource, int max_size, char * ret_filename);
 
 /**
- * Get a subresource from the resource.
- * @param resource The resource to get subresources from.
- * @param index The index of the resource, a negative value will wrap from the end.
+ * Get the number of items for input/output.
+ * @param resource The resource to get number of items from.
+ * @returns The number of items.
+ */
+extern CNWN_PUBLIC int cnwn_resource_get_num_items(const cnwn_Resource * resource);
+
+/**
+ * Get an item (a filename that will be used to input/output specific data for the resource).
+ * @param resource The resource to get item from.
+ * @param index The index of the item, negative values will wrap from the end.
+ * @param[out] ret_item Return the item here.
+ * @returns The number of returned items (will be zero if the resource has no items or @p index is out of range).
+ */
+extern CNWN_PUBLIC int cnwn_resource_get_item(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item);
+
+/**
+ * Extract an item from the resource.
+ * @param resource The resource to extract an item from.
+ * @param index The index of the item, negative values will wrap from the end.
+ * @param source_f The source data of the resource.
+ * @param destination_f Write the extracted item to this file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_extract_item(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f);
+
+/**
+ * Extract the resource itself.
+ * @param resource The resource to extract.
+ * @param source_f The source data of the resource.
+ * @param destination_f Write the extracted item to this file.
+ * @returns The number of written bytes or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_extract(const cnwn_Resource * resource, cnwn_File * source_f, cnwn_File * destination_f);
+
+
+/**
+ * Get the number of resources for input/output.
+ * @param resource The resource to get number of resources from.
+ * @returns The number of resources.
+ */
+extern CNWN_PUBLIC int cnwn_resource_get_num_resources(const cnwn_Resource * resource);
+
+/**
+ * Get an resource (a filename that will be used to input/output specific data for the resource).
+ * @param resource The resource to get resource from.
+ * @param index The index of the resource, negative values will wrap from the end.
  * @returns The subresource or NULL if @p index is out of range.
  */
-extern CNWN_PUBLIC const cnwn_Resource * cnwn_resource_get_subresource(const cnwn_Resource * resource, int index);
-
-/**
- * Get the number of filenames for input/output.
- * @param resource The resource to get number of filenames from.
- * @returns The number of filenames.
- */
-extern CNWN_PUBLIC int cnwn_resource_get_num_filenames(const cnwn_Resource * resource);
-
-/**
- * Get the filename for input/output.
- * @param resource The resource to get filename from.
- * @param index The index of the filename, negative values will wrap from the end.
- * @returns The filename or NULL if @p index is out of range.
- */
-extern CNWN_PUBLIC const char * cnwn_resource_get_filename(const cnwn_Resource * resource, int index);
-
-/**
- * Get the entry filename for input/output.
- * @param resource The resource to get entry filename from.
- * @returns The entry filename or NULL if @p index is out of range.
- *
- * The entry filename merely describes the resource name + extension.
- */
-extern CNWN_PUBLIC const char * cnwn_resource_get_entry_filename(const cnwn_Resource * resource);
-
-/**
- * Extract a resource to a new file.
- * @param resource The resource to extract from.
- * @param input_f The file to read from, the offset will be seeked to resource->offset.
- * @param path Where to extract the resource, if directories are involved they will be created.
- * @returns The number of written bytes or a negative value on error.
- */
-extern CNWN_PUBLIC int64_t cnwn_resource_extract(const cnwn_Resource * resource, cnwn_File * input_f, const char * path);
-
-/**
- * Copy a resource from one file to another.
- * @param resource The resource to copy.
- * @param input_f The file to read from, make sure it's offset is where it's supposed to before calling this function.
- * @param path A path to the output file, will be created (and truncate any existing) file. If any directories are in the path they will be created.
- * @returns The number of written bytes or a negative value on error.
- */
-extern CNWN_PUBLIC int64_t cnwn_resource_copy2(const cnwn_Resource * resource, cnwn_File * input_f, const char * path);
-
-/**
- * Initialize a new resource iterator.
- * @param iterator The resource iterator struct to initialize.
- * @param resource The resource to iterate (will iterate all of it's subresources too, if any).
- * @returns The number of items in the iterator.
- */
-extern CNWN_PUBLIC int cnwn_resource_iterator_init(cnwn_ResourceIterator * iterator, const cnwn_Resource * resource);
-
-/**
- * Deinitialize a resource iterator.
- * @param iterator The resource iterator to deinitialize.
- */
-extern CNWN_PUBLIC void cnwn_resource_iterator_deinit(cnwn_ResourceIterator * iterator);
-
-/**
- * Get the length (number of items) in the iterator.
- * @param iterator The resource iterator to get the length for.
- * @returns The number of items in the iterator.
- */
-extern CNWN_PUBLIC int cnwn_resource_iterator_get_length(const cnwn_ResourceIterator * iterator);
-
-/**
- * Get a resource item from the iterator.
- * @param iterator The resource iterator to get the item from.
- * @param index The index of the item to get, negative values will wrap from the end of the iterator.
- * @returns A resource item or NULL if @p index is out of range.
- */
-extern CNWN_PUBLIC const cnwn_ResourceIteratorItem * cnwn_resource_iterator_get(const cnwn_ResourceIterator * iterator, int index);
-
+extern CNWN_PUBLIC cnwn_Resource * cnwn_resource_get_resource(const cnwn_Resource * resource, int index);
 
 #ifdef __cplusplus
 }
