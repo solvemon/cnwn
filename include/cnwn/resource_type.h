@@ -12,6 +12,20 @@
  * @param t The resource type.
  * @returns True or false.
  */
+#define CNWN_RESOURCE_TYPE_VALID(t) ((t) > CNWN_RESOURCE_TYPE_INVALID && (t) < CNWN_MAX_RESOURCE_TYPE && CNWN_RESOURCE_TYPE_INFOS[(t)].type > CNWN_RESOURCE_TYPE_INVALID && CNWN_RESOURCE_TYPE_INFOS[(t)].type < CNWN_MAX_RESOURCE_TYPE && CNWN_RESOURCE_TYPE_INFOS[(t)].extension != NULL)
+
+/**
+ * Get the resource type info.
+ * @param t The resource type.
+ * @returns Returns the info struct.
+ */
+#define CNWN_RESOURCE_TYPE_INFO(t) (CNWN_RESOURCE_TYPE_VALID((t)) ? CNWN_RESOURCE_TYPE_INFOS[(t)] : CNWN_RESOURCE_TYPE_INFO_INVALID)
+
+/**
+ * Check if the resource type is ERF compatible.
+ * @param t The resource type.
+ * @returns True or false.
+ */
 #define CNWN_RESOURCE_TYPE_IS_ERF(t) ((t) == CNWN_RESOURCE_TYPE_ERF || (t) == CNWN_RESOURCE_TYPE_HAK || (t) == CNWN_RESOURCE_TYPE_MOD || (t) == CNWN_RESOURCE_TYPE_NWM)
 
 /**
@@ -603,19 +617,9 @@ typedef enum cnwn_ResourceType_e cnwn_ResourceType;
 typedef struct cnwn_ResourceTypeInfo_s cnwn_ResourceTypeInfo;
 
 /**
- * @see struct cnwn_LocalizedString_s
- */
-typedef struct cnwn_LocalizedString_s cnwn_LocalizedString;
-
-/**
  * Info about a specific resource type.
  */
 struct cnwn_ResourceTypeInfo_s {
-
-    /**
-     * The file extension.
-     */
-    const char * extension;
 
     /**
      * The type.
@@ -623,25 +627,14 @@ struct cnwn_ResourceTypeInfo_s {
     cnwn_ResourceType type;
 
     /**
+     * The file extension.
+     */
+    const char * extension;
+
+    /**
      * A human readable name.
      */
     const char * name;
-};
-
-/**
- * Used for localized strings.
- */
-struct cnwn_LocalizedString_s {
-
-    /**
-     * Language ID.
-     */
-    int32_t language_id;
-
-    /**
-     * The string itself.
-     */
-    char * text;
 };
 
 #ifdef __cplusplus
@@ -651,63 +644,28 @@ extern "C" {
 /**
  * Resource info.
  */
-extern CNWN_PUBLIC const cnwn_ResourceTypeInfo CNWN_RESOURCE_TYPE_INFOS[];
+extern CNWN_PUBLIC const cnwn_ResourceTypeInfo CNWN_RESOURCE_TYPE_INFOS[CNWN_MAX_RESOURCE_TYPE];
 
 /**
- * Check if a resource name is valid or not.
- * @param name The resource name.
- * @returns True or false.
- *
- * A valid name: max 16 characters, only ascii alpha, digits and underscore allowed.
+ * An invalid resource type to return from CNWN_RESOURCE_TYPE_INFO() macro.
  */
-extern CNWN_PUBLIC bool cnwn_resource_name_valid(const char * name);
-
-/**
- * Get the resource info for a type.
- * @param resource_type The resource type.
- * @returns The info (invalid types will return empty info).
- */
-extern CNWN_PUBLIC const cnwn_ResourceTypeInfo * cnwn_resource_type_info(cnwn_ResourceType resource_type);
+extern CNWN_PUBLIC const cnwn_ResourceTypeInfo CNWN_RESOURCE_TYPE_INFO_INVALID;
 
 /**
  * Get the resource type from a path.
  * @param path The path.
  * @returns The resource type or CNWN_RESOURCE_TYPE_INVALID if the filename extension was unavailable or not recognized.
+ * @note Only the file extension bit of @p path will be examined, if it contains multiple extensions such as "uti.xml.tar.gz" the first one (uti in this case) will be used.
  */
 extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_type_from_path(const char * path);
 
 /**
- * Initialize a localized string.
- * @param localized_string The struct to initialize.
- * @param language_id The language ID.
- * @param text The string.
+ * Get the resource type info from a path.
+ * @param path The path.
+ * @returns The resource type info, may return an invalid info (check info->type).
+ * @note Only the file extension bit of @p path will be examined, if it contains multiple extensions such as "uti.xml.tar.gz" the first one (uti in this case) will be used.
  */
-extern CNWN_PUBLIC void cnwn_localized_string_init(cnwn_LocalizedString * localized_string, int language_id, const char * text);
-
-/**
- * Read and initialize the localized string from a file.
- * @param localized_string The localized string.
- * @param f The file, must be at the correct offset.
- * @returns The number of read bytes or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- * @note Any previous content in @p localized_string will be discarded.
- */
-extern CNWN_PUBLIC int64_t cnwn_localized_string_init_from_file(cnwn_LocalizedString * localized_string, cnwn_File * f);
-
-/**
- * Deinitialize a localized string.
- * @param localized_string The localized string to initialize.
- */
-extern CNWN_PUBLIC void cnwn_localized_string_deinit(cnwn_LocalizedString * localized_string);
-
-/**
- * Write the localized string to a file.
- * @param localized_string The localized string.
- * @param f The file, must be at the correct offset.
- * @returns The number of written bytes or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- */
-extern CNWN_PUBLIC int64_t cnwn_localized_string_write(const cnwn_LocalizedString * localized_string, cnwn_File * f);
+extern CNWN_PUBLIC cnwn_ResourceTypeInfo cnwn_resource_type_info_from_path(const char * path);
 
 #ifdef __cplusplus
 }

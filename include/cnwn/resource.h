@@ -6,20 +6,43 @@
 #define CNWN_RESOURCE_H
 
 #include "cnwn/endian.h"
+#include "cnwn/containers.h"
 #include "cnwn/file_system.h"
 #include "cnwn/resource_type.h"
-#include "cnwn/containers.h"
-//#include "erf.h"
 
 /**
- * Get a resource handler for a specific type.
+ * Check if a char is valid for a resource name.
+ * @param c The char.
+ * @returns True or false.
  */
-#define CNWN_RESOURCE_HANDLER(t) ((t) > CNWN_RESOURCE_TYPE_INVALID && (t) < CNWN_MAX_RESOURCE_TYPE ? CNWN_RESOURCE_HANDLERS[(t)] : CNWN_RESOURCE_HANDLER_NONE)
+#define CNWN_RESOURCE_NAME_CHAR_VALID(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || ((c) >= '0' && (c) <= '9') || (c) == '_')
 
 /**
- * @see struct cnwn_ResourceERF_s
+ * Get a handler for a specific resource type.
+ * @param t The resource type.
+ * @returns A handler or NULL if @p t is invalid.
  */
-typedef struct cnwn_ResourceERF_s cnwn_ResourceERF;
+#define CNWN_RESOURCE_HANDLER(t) (CNWN_RESOURCE_TYPE_VALID(t) ? CNWN_RESOURCE_HANDLERS + (t) : NULL)
+
+/**
+ * @see cnwn_Array
+ */
+typedef cnwn_Array cnwn_MetaFileArray;
+
+/**
+ * @see cnwn_Array
+ */
+typedef cnwn_Array cnwn_ResourceArray;
+
+/**
+ * @see struct cnwn_MetaFile_s
+ */
+typedef struct cnwn_MetaFile_s cnwn_MetaFile;
+
+/**
+ * @see struct cnwn_ResourceCallbacks_s
+ */
+typedef struct cnwn_ResourceCallbacks_s cnwn_ResourceCallbacks;
 
 /**
  * @see struct cnwn_Resource_s
@@ -27,160 +50,140 @@ typedef struct cnwn_ResourceERF_s cnwn_ResourceERF;
 typedef struct cnwn_Resource_s cnwn_Resource;
 
 /**
- * @see struct cnwn_Array_s
- */
-typedef cnwn_Array cnwn_ResourceArray;
-
-/**
- * @see struct cnwn_ResourceItem_s
- */
-typedef struct cnwn_ResourceItem_s cnwn_ResourceItem;
-
-/**
  * @see struct cnwn_ResourceHandler_s
  */
 typedef struct cnwn_ResourceHandler_s cnwn_ResourceHandler;
 
 /**
- * Initialize a resource from a file.
+ * Initialize a resource from file, usually when reading to extract from ERF/BIF.
  * @param resource The resource struct to initialize.
- * @param size The size of the resource in bytes.
- * @param f The file, must be set at the correct offset.
- * @returns Zero on success or a negative value on error.
+ * @param input_f The input file to read from, must be at the correct offset which will be stored in the resource.
+ * @returns Zero on success and a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
+ * @note Callback implementations only need to worry about the resource type specific data and modifying the the meta filenames.
  */
-typedef int (*cnwn_ResourceInitExtract)(cnwn_Resource * resource, int64_t size, cnwn_File * f);
+typedef int (*cnwn_ResourceInitFromFile)(cnwn_Resource * resource, cnwn_File * input_f);
 
 /**
- * Initialize a resource from a path, usually for archiving stuff.
+ * Initialize a resource from path, usually when archiving to ERF/BIF.
  * @param resource The resource struct to initialize.
- * @returns Zero on success or a negative value on error.
+ * @param path The path to the file to read from.
+ * @returns Zero on success and a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
+ * @note This function will not actually read any contents of @p path.
+ * @note Callback implementations only need to worry about the resource type specific data and modifying the the meta filenames.
  */
-typedef int (*cnwn_ResourceInitArchive)(cnwn_Resource * resource);
+typedef int (*cnwn_ResourceInitFromPath)(cnwn_Resource * resource, const char * path);
 
 /**
- * Used to deinitialize resources.
- * @param resource Only deinitialize the resource type specific data.
+ * Deinitialize a resource.
+ * @param resource The resource deinitialize.
+ * @note Callback implementations should only free the resource type specific data.
  */
 typedef void (*cnwn_ResourceDeinit)(cnwn_Resource * resource);
 
 /**
- * Get the number of items for input/output.
- * @param resource The resource to get number of items from.
- * @returns The number of items.
- */
-typedef int (*cnwn_ResourceGetNumItems)(const cnwn_Resource * resource);
-
-/**
- * Get an item (a filename that will be used to input/output specific data for the resource).
- * @param resource The resource to get item from.
- * @param index The index of the item, negative values will wrap from the end.
- * @param[out] ret_item Return the item here.
- * @returns The number of returned items (will be zero if the resource has no items or @p index is out of range).
- */
-typedef int (*cnwn_ResourceGetItem)(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item);
-
-/**
- * Extract an item from the resource.
- * @param resource The resource to extract an item from.
- * @param index The index of the item, negative values will wrap from the end.
- * @param source_f The source data of the resource.
- * @param destination_f Write the extracted item to this file.
- * @returns The number of written bytes or a negative value on error.
+ * Extract a resource (binary).
+ * @param resource The resource.
+ * @param input_f The file to read the resource from, will seek to the right offset based on the resource->offset.
+ * @param output_f The file to write the resource to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-typedef int64_t (*cnwn_ResourceExtractItem)(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f);
+typedef int64_t (*cnwn_ResourceExtract)(const cnwn_Resource * resource, cnwn_File * input_f, cnwn_File * output_f);
 
 /**
- * Extract the resource itself.
- * @param resource The resource to extract.
- * @param source_f The source data of the resource.
- * @param destination_f Write the extracted item to this file.
- * @returns The number of written bytes or a negative value on error.
+ * Archive a resource (binary).
+ * @param resource The resource.
+ * @param input_f The file to read the resource from.
+ * @param output_f The file to write the resource to, will seek to the right offset based on the resource->offset.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-typedef int64_t (*cnwn_ResourceExtract)(const cnwn_Resource * resource, cnwn_File * source_f, cnwn_File * destination_f);
+typedef int64_t (*cnwn_ResourceArchive)(const cnwn_Resource * resource, cnwn_File * input_f, cnwn_File * output_f);
 
-/***
- * Represents an ERF (also mod, nwm and hak) file.
+/**
+ * Extract a resource (binary) meta file.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @param input_f The file to read the resource meta file from.
+ * @param output_f The file to write the resource meta file to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
  */
-struct cnwn_ResourceERF_s {
-    
-    /**
-     * The ERF type.
-     */
-    char erf_type[5];
+typedef int64_t (*cnwn_ResourceMetaFileExtract)(const cnwn_Resource * resource, int index, cnwn_File * input_f, cnwn_File * output_f);
+
+/**
+ * Archive a resource (binary) meta file.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @param input_f The file to read the resource meta file from.
+ * @param output_f The file to write the resource meta file to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+typedef int64_t (*cnwn_ResourceMetaFileArchive)(const cnwn_Resource * resource, int index, cnwn_File * input_f, cnwn_File * output_f);
+
+/**
+ * Callbacks for resource type specific handlers.
+ */
+struct cnwn_ResourceCallbacks_s {
 
     /**
-     * The type as a number.
+     * @see cnwn_ResourceInitFromFile
      */
-    uint16_t type;
+    cnwn_ResourceInitFromFile f_init_from_file;
 
     /**
-     * The ERF version.
+     * @see cnwn_ResourceInitFromPath
      */
-    char erf_version[5];
+    cnwn_ResourceInitFromPath f_init_from_path;
 
     /**
-     * Major version as a number.
+     * @see cnwn_ResourceDeinit
      */
-    int major_version;
+    cnwn_ResourceDeinit f_deinit;
 
     /**
-     * Minor version as a number.
+     * @see cnwn_ResourceExtract
      */
-    int minor_version;
-    
-    /**
-     * The number of localized strings.
-     */
-    uint32_t num_localized_strings;
+    cnwn_ResourceExtract f_extract;
 
     /**
-     * The localized strings offset.
+     * @see cnwn_ResourceArchive
      */
-    uint32_t localized_strings_offset;
+    cnwn_ResourceArchive f_archive;
 
     /**
-     * The localized strings size.
+     * @see cnwn_ResourceMetaFileExtract
      */
-    uint32_t localized_strings_size;
+    cnwn_ResourceMetaFileExtract f_meta_file_extract;
 
     /**
-     * Keys offset.
+     * @see cnwn_ResourceMetaFileArchive
      */
-    uint32_t keys_offset;
+    cnwn_ResourceMetaFileArchive f_meta_file_archive;
+};
+
+/**
+ * Files that are not pure resources, but can be used as part of resources.
+ */
+struct cnwn_MetaFile_s {
 
     /**
-     * Values offset.
+     * The name of the meta file.
      */
-    uint32_t values_offset;
+    char * name;
 
     /**
-     * Year.
+     * A description of the meta file.
      */
-    uint32_t year;
+    char * description;
 
     /**
-     * Day of year.
+     * The size of the meta file (in bytes).
      */
-    uint32_t day_of_year;
-
-    /**
-     * Descripting stringref.
-     */
-    uint32_t description_strref;
-    
-    /**
-     * Resources offset.
-     */
-    uint32_t resources_offset;
-
-    /**
-     * The rest of the header.
-     */
-    uint8_t rest[116];
+    int64_t size;
 };
 
 /**
@@ -194,97 +197,55 @@ struct cnwn_Resource_s {
     cnwn_ResourceType type;
 
     /**
-     * A parent or NULL if top.
-     */
-    cnwn_Resource * parent;
-
-    /**
      * The name.
      */
     char * name;
 
     /**
-     * Offset.
+     * The path to the resource.
+     */
+    char * path;
+    
+    /**
+     * Offset in a file.
      */
     int64_t offset;
 
     /**
-     * Size.
+     * Resource size (in bytes).
      */
     int64_t size;
-
+    
     /**
-     * The subresources.
+     * A parent or NULL if top.
+     */
+    cnwn_Resource * parent;
+    
+    /**
+     * The child resources.
      */
     cnwn_ResourceArray resources;
 
     /**
-     * Resource type specific data.
+     * The subresources.
      */
-    union {
-
-        /**
-         * ERF resource.
-         */
-        cnwn_ResourceERF r_erf;
-    } r;
+    cnwn_MetaFileArray meta_files;
 };
 
 /**
- * A resource item.
- */
-struct cnwn_ResourceItem_s {
-
-    /**
-     * The filename of the item.
-     */
-    char filename[CNWN_PATH_MAX_SIZE];
-
-    /**
-     * The size of the item.
-     */
-    int64_t size;
-};
-
-/**
- * A resource handler
+ * A resource handler.
  */
 struct cnwn_ResourceHandler_s {
 
     /**
-     * When initializing from files.
+     * The name of the handler.
      */
-    cnwn_ResourceInitExtract f_init_extract;
+    const char * name;
 
     /**
-     *
+     * The callbacks.
      */
-    cnwn_ResourceInitArchive f_init_archive;
-
-    /**
-     * When deinitializing.
-     */
-    cnwn_ResourceDeinit f_deinit;
-
-    /**
-     * When getting the number of items.
-     */
-    cnwn_ResourceGetNumItems f_get_num_items;
-
-    /**
-     * When getting an item.
-     */
-    cnwn_ResourceGetItem f_get_item;
-
-    /**
-     * When extracting items from a resource.
-     */
-    cnwn_ResourceExtractItem f_extract_item;
-
-    /**
-     * Extract the resource.
-     */
-    cnwn_ResourceExtract f_extract;
+    cnwn_ResourceCallbacks callbacks;
 };
 
 #ifdef __cplusplus
@@ -292,117 +253,193 @@ extern "C" {
 #endif
 
 /**
- * Just a zeroed resource handler.
- */
-extern CNWN_PUBLIC const cnwn_ResourceHandler CNWN_RESOURCE_HANDLER_NONE;
-
-/**
- * The resource handlers.
+ * Handlers for different types.
  */
 extern CNWN_PUBLIC cnwn_ResourceHandler CNWN_RESOURCE_HANDLERS[CNWN_MAX_RESOURCE_TYPE];
 
 /**
- * Initialize a resource from a file, usually for listing or extracting stuff.
- * @param resource The resource struct to initialize.
- * @param type The type.
- * @param name The name.
- * @param size The size of the resource in bytes.
- * @param f The file, must be set at the correct offset.
- * @returns Zero on success or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
+ * Check if a resource name is valid or not.
+ * @param name The resource name.
+ * @param version A version or NULL to always return true.
+ * @returns True or false.
+ * @note This function will always return true if @p version is NULL and will return false if an unsupported @p version is specified.
+ *
+ * A valid name: max 16 (32 for 1.1) characters, only ascii alpha, digits and underscore allowed.
  */
-extern CNWN_PUBLIC int cnwn_resource_init_extract(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t size, cnwn_File * f);
+extern CNWN_PUBLIC bool cnwn_resource_name_valid(const char * name, const cnwn_Version * version);
 
 /**
- * Initialize a resource from a file, usually for listing or extracting stuff.
+ * Initialize a meta file struct.
+ * @param meta_file The meta file struct to initialize.
+ * @param name The name of the meta file.
+ * @param description The description of the meta file.
+ * @param size The size of the meta file.
+ */
+extern CNWN_PUBLIC void cnwn_meta_file_init(cnwn_MetaFile * meta_file, const char * name, const char * description, int64_t size);
+
+/**
+ * Deinitialize a meta file.
+ * @param meta_file The meta file to deinitialize.
+ */
+extern CNWN_PUBLIC void cnwn_meta_file_deinit(cnwn_MetaFile * meta_file);
+
+/**
+ * Get the name from a meta file.
+ * @param meta_file The meta file.
+ * @returns The name.
+ */
+extern CNWN_PUBLIC const char * cnwn_meta_file_get_name(const cnwn_MetaFile * meta_file);
+
+/**
+ * Get the description from a meta file.
+ * @param meta_file The meta file.
+ * @returns The description.
+ */
+extern CNWN_PUBLIC const char * cnwn_meta_file_get_description(const cnwn_MetaFile * meta_file);
+
+/**
+ * Vanilla initialization of a resource.
  * @param resource The resource struct to initialize.
- * @param type The type.
- * @param name The name.
- * @param path The path to the file or directory to archive.
- * @returns Zero on success or a negative value on error.
+ * @param type The resource type.
+ * @param name The name of the resource.
+ * @param offset The offset in a file (zero if the file wasn't initialized from file).
+ * @param size The size of the resource.
+ * @param parent The parent or NULL if the resource is a top resource.
+ * @returns Zero on success and a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_resource_init_archive(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, const char * path);
+extern CNWN_PUBLIC int cnwn_resource_init(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t offset, int64_t size, cnwn_Resource * parent);
+
+/**
+ * Initialize a resource from file, usually when reading to extract from ERF/BIF.
+ * @param resource The resource struct to initialize.
+ * @param type The resource type.
+ * @param name The name of the resource.
+ * @param offset The offset in a file (zero if the file wasn't initialized from file).
+ * @param size The size of the resource.
+ * @param parent The parent or NULL if the resource is a top resource.
+ * @param input_f The input file to read from, must be at the correct offset which will be stored in the resource.
+ * @returns Zero on success and a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int cnwn_resource_init_from_file(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t size, cnwn_Resource * parent, cnwn_File * input_f);
+
+/**
+ * Initialize a resource from path, usually when archiving to ERF/BIF.
+ * @param resource The resource struct to initialize.
+ * @param parent The parent or NULL if the resource is a top resource.
+ * @param path The path to the file to read from.
+ * @returns Zero on success and a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ * @note This function will not actually read any contents of @p path.
+ */
+extern CNWN_PUBLIC int cnwn_resource_init_from_path(cnwn_Resource * resource, cnwn_Resource * parent, const char * path);
 
 /**
  * Deinitialize a resource.
- * @param resource The resource to deinitialize.
+ * @param resource The resource deinitialize.
  */
 extern CNWN_PUBLIC void cnwn_resource_deinit(cnwn_Resource * resource);
 
 /**
  * Get the resource type.
- * @param resource The resource to get the type from.
+ * @param resource The resource.
+ * @returns The resource type.
  */
 extern CNWN_PUBLIC cnwn_ResourceType cnwn_resource_get_type(const cnwn_Resource * resource);
 
 /**
+ * Get the resource type info.
+ * @param resource The resource.
+ * @returns The resource type info (may contain invalid data, check info->type).
+ */
+extern CNWN_PUBLIC cnwn_ResourceTypeInfo cnwn_resource_get_type_info(const cnwn_Resource * resource);
+
+/**
  * Get the resource name.
- * @param resource The resource to get the name from.
+ * @param resource The resource.
+ * @returns The resource name (may be empty but never NULL).
  */
 extern CNWN_PUBLIC const char * cnwn_resource_get_name(const cnwn_Resource * resource);
 
 /**
- * Get the resource filename (name + dot + extension).
- * @param resource The resource to get the filename from.
- * @param max_size The maximum size (including zero terminator) of the return string.
- * @param[out] ret_filename Write filename here, pass NULL to get required string length.
- * @returns The string length (excluding zero terminator) of the return string.
+ * Get the resource path.
+ * @param resource The resource.
+ * @returns The resource path, will return an empty string if the resource has no path associated with it.
  */
-extern CNWN_PUBLIC int cnwn_resource_get_filename(const cnwn_Resource * resource, int max_size, char * ret_filename);
+extern CNWN_PUBLIC const char * cnwn_resource_get_path(const cnwn_Resource * resource);
 
 /**
- * Get the number of items for input/output.
- * @param resource The resource to get number of items from.
- * @returns The number of items.
- */
-extern CNWN_PUBLIC int cnwn_resource_get_num_items(const cnwn_Resource * resource);
-
-/**
- * Get an item (a filename that will be used to input/output specific data for the resource).
- * @param resource The resource to get item from.
- * @param index The index of the item, negative values will wrap from the end.
- * @param[out] ret_item Return the item here.
- * @returns The number of returned items (will be zero if the resource has no items or @p index is out of range).
- */
-extern CNWN_PUBLIC int cnwn_resource_get_item(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item);
-
-/**
- * Extract an item from the resource.
- * @param resource The resource to extract an item from.
- * @param index The index of the item, negative values will wrap from the end.
- * @param source_f The source data of the resource.
- * @param destination_f Write the extracted item to this file.
- * @returns The number of written bytes or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- */
-extern CNWN_PUBLIC int64_t cnwn_resource_extract_item(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f);
-
-/**
- * Extract the resource itself.
- * @param resource The resource to extract.
- * @param source_f The source data of the resource.
- * @param destination_f Write the extracted item to this file.
- * @returns The number of written bytes or a negative value on error.
- * @see cnwn_get_error() if this function returns a negative value.
- */
-extern CNWN_PUBLIC int64_t cnwn_resource_extract(const cnwn_Resource * resource, cnwn_File * source_f, cnwn_File * destination_f);
-
-
-/**
- * Get the number of resources for input/output.
- * @param resource The resource to get number of resources from.
- * @returns The number of resources.
+ * Get the number of resources.
+ * @param resource The resource.
+ * @returns The number of resources this resource has.
  */
 extern CNWN_PUBLIC int cnwn_resource_get_num_resources(const cnwn_Resource * resource);
 
 /**
- * Get an resource (a filename that will be used to input/output specific data for the resource).
- * @param resource The resource to get resource from.
+ * Get a child resource from the resource.
+ * @param resource The resource.
  * @param index The index of the resource, negative values will wrap from the end.
- * @returns The subresource or NULL if @p index is out of range.
+ * @returns The child resource or NULL if @p index is out of range.
  */
 extern CNWN_PUBLIC cnwn_Resource * cnwn_resource_get_resource(const cnwn_Resource * resource, int index);
+
+/**
+ * Extract a resource (binary).
+ * @param resource The resource.
+ * @param input_f The file to read the resource from, will seek to the right offset based on the resource->offset.
+ * @param output_f The file to write the resource to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_extract(const cnwn_Resource * resource, cnwn_File * input_f, cnwn_File * output_f);
+
+/**
+ * Archive a resource (binary).
+ * @param resource The resource.
+ * @param input_f The file to read the resource from.
+ * @param output_f The file to write the resource to, will seek to the right offset based on the resource->offset.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_archive(const cnwn_Resource * resource, cnwn_File * input_f, cnwn_File * output_f);
+
+/**
+ * Get the number of meta files the resource has.
+ * @param resource The resource.
+ * @returns The number of meta files.
+ */
+extern CNWN_PUBLIC int cnwn_resource_get_num_meta_files(const cnwn_Resource * resource);
+
+/**
+ * Get a meta file from the resource.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @returns The meta file or NULL if @p index is out of range.
+ */
+extern CNWN_PUBLIC const cnwn_MetaFile * cnwn_resource_get_meta_file(const cnwn_Resource * resource, int index);
+
+/**
+ * Extract a resource (binary) meta file.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @param input_f The file to read the resource meta file from.
+ * @param output_f The file to write the resource meta file to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_meta_file_extract(const cnwn_Resource * resource, int index, cnwn_File * input_f, cnwn_File * output_f);
+
+/**
+ * Archive a resource (binary) meta file.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @param input_f The file to read the resource meta file from.
+ * @param output_f The file to write the resource meta file to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_meta_file_archive(const cnwn_Resource * resource, int index, cnwn_File * input_f, cnwn_File * output_f);
 
 #ifdef __cplusplus
 }

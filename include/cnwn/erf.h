@@ -9,6 +9,87 @@
 #include "cnwn/endian.h"
 #include "cnwn/resource.h"
 
+/***
+ * Represents an ERF (also mod, nwm and hak) file.
+ */
+struct cnwn_ResourceERF_s {
+    
+    /**
+     * The ERF type.
+     */
+    char erf_type[5];
+
+    /**
+     * The type as a number.
+     */
+    uint16_t type;
+
+    /**
+     * The ERF version.
+     */
+    char erf_version[5];
+
+    /**
+     * Major version as a number.
+     */
+    int major_version;
+
+    /**
+     * Minor version as a number.
+     */
+    int minor_version;
+    
+    /**
+     * The number of localized strings.
+     */
+    uint32_t num_localized_strings;
+
+    /**
+     * The localized strings offset.
+     */
+    uint32_t localized_strings_offset;
+
+    /**
+     * The localized strings size.
+     */
+    uint32_t localized_strings_size;
+
+    /**
+     * Keys offset.
+     */
+    uint32_t keys_offset;
+
+    /**
+     * Values offset.
+     */
+    uint32_t values_offset;
+
+    /**
+     * Year.
+     */
+    uint32_t year;
+
+    /**
+     * Day of year.
+     */
+    uint32_t day_of_year;
+
+    /**
+     * Descripting stringref.
+     */
+    uint32_t description_strref;
+    
+    /**
+     * Resources offset.
+     */
+    uint32_t resources_offset;
+
+    /**
+     * The rest of the header.
+     */
+    uint8_t rest[116];
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif

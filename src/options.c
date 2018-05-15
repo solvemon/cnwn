@@ -37,7 +37,7 @@ int cnwn_options_find(const cnwn_Option * options, const char * opt)
     return -1;
 }
 
-int cnwn_options_parse(const cnwn_Option * options, int index, int argc, char * argv[], int * ret_optindex, const char ** ret_optarg)
+int cnwn_options_parse_argument(const cnwn_Option * options, int index, int argc, char * argv[], cnwn_OptionResult * ret_result)
 {
     if (index < 0)
         index += argc;
@@ -46,39 +46,131 @@ int cnwn_options_parse(const cnwn_Option * options, int index, int argc, char * 
             int optindex = cnwn_options_find(options, argv[index] + 1);
             if (optindex < 0) {
                 cnwn_set_error("invalid option");
-                if (ret_optindex != NULL)
-                    *ret_optindex = -1;
-                if (ret_optarg != NULL)
-                    *ret_optarg = NULL;
-                return -1;
+                if (ret_result != NULL) {
+                    ret_result->index = index;
+                    ret_result->arg = argv[index];
+                    ret_result->optindex = -1;
+                    ret_result->option = NULL;
+                    ret_result->optarg = NULL;
+                    ret_result->optvalue = 0;
+                }
+                return CNWN_OPTION_ERROR_INVALID;
             }
             if (!cnwn_strisblank(options[optindex].arg) && index >= argc - 1) {
                 cnwn_set_error("missing option argument");
-                if (ret_optindex != NULL)
-                    *ret_optindex = optindex;
-                if (ret_optarg != NULL)
-                    *ret_optarg = NULL;
-                return -1;
+                if (ret_result != NULL) {
+                    ret_result->index = index;
+                    ret_result->arg = argv[index];
+                    ret_result->optindex = optindex;
+                    ret_result->option = options + optindex;
+                    ret_result->optarg = NULL;
+                    ret_result->optvalue = 0;
+                }
+                return CNWN_OPTION_ERROR_NOARG;
             }
-            if (ret_optindex != NULL)
-                *ret_optindex = optindex;
             if (!cnwn_strisblank(options[optindex].arg)) {
-                if (ret_optarg != NULL)
-                    *ret_optarg = argv[index + 1];
+                if (ret_result != NULL) {
+                    ret_result->index = index;
+                    ret_result->arg = argv[index];
+                    ret_result->optindex = optindex;
+                    ret_result->option = options + optindex;
+                    ret_result->optarg = argv[index + 1];
+                    ret_result->optvalue = options[optindex].optvalue;
+                }
                 return 2;
-            } else if (ret_optarg != NULL)
-                *ret_optarg = NULL;
+            } 
+            if (ret_result != NULL) {
+                ret_result->index = index;
+                ret_result->arg = argv[index];
+                ret_result->optindex = optindex;
+                ret_result->option = options + optindex;
+                ret_result->optarg = NULL;
+                ret_result->optvalue = options[optindex].optvalue;
+            }
             return 1;
+        } else if (CNWN_OPTION_ARG_IS_LONGHAND(argv[index])) {
+            int optindex = cnwn_options_find(options, argv[index] + 2);
+            if (optindex < 0) {
+                cnwn_set_error("invalid option");
+                if (ret_result != NULL) {
+                    ret_result->index = index;
+                    ret_result->arg = argv[index];
+                    ret_result->optindex = -1;
+                    ret_result->option = NULL;
+                    ret_result->optarg = NULL;
+                    ret_result->optvalue = 0;
+                }
+                return CNWN_OPTION_ERROR_INVALID;
+            }
+            if (!cnwn_strisblank(options[optindex].arg)) {
+                // FIND VALUE
+                int finder = cnwn_strfind(argv[index], 0, "=", NULL);
+                if (finder < 3) {
+                    cnwn_set_error("missing option value");
+                    if (ret_result != NULL) {
+                        ret_result->index = index;
+                        ret_result->arg = argv[index];
+                        ret_result->optindex = optindex;
+                        ret_result->option = options + optindex;
+                        ret_result->optarg = NULL;
+                        ret_result->optvalue = 0;
+                    }
+                    return CNWN_OPTION_ERROR_NOARG;
+                }
+                if (ret_result != NULL) {
+                    ret_result->index = index;
+                    ret_result->arg = argv[index];
+                    ret_result->optindex = optindex;
+                    ret_result->option = options + optindex;
+                    ret_result->optarg = argv[index + 1] + finder + 1;
+                    ret_result->optvalue = options[optindex].optvalue;
+                }
+                return 1;
+            } 
+            if (ret_result != NULL) {
+                ret_result->index = index;
+                ret_result->arg = argv[index];
+                ret_result->optindex = optindex;
+                ret_result->option = options + optindex;
+                ret_result->optarg = NULL;
+                ret_result->optvalue = options[optindex].optvalue;
+            }
+            return 1;
+        } else if (ret_result != NULL) {
+            ret_result->index = index;
+            ret_result->arg = argv[index];
+            ret_result->optindex = -1;
+            ret_result->option = NULL;
+            ret_result->optarg = NULL;
+            ret_result->optvalue = 0;
         }
-        if (ret_optindex != NULL)
-            *ret_optindex = -1;
-        if (ret_optarg != NULL)
-            *ret_optarg = NULL;
         return 1;
     }
-    if (ret_optindex != NULL)
-        *ret_optindex = -1;
-    if (ret_optarg != NULL)
-        *ret_optarg = NULL;
+    if (ret_result != NULL) {
+        ret_result->index = index;
+        ret_result->arg = argv[index];
+        ret_result->optindex = -1;
+        ret_result->option = NULL;
+        ret_result->optarg = NULL;
+        ret_result->optvalue = 0;
+    }
     return 0;
+}
+
+cnwn_OptionResult * cnwn_options_parse(const cnwn_Option * options, int argc, char * argv[])
+{
+    if (argc < 0)
+        argc = 0;
+    int index = 0;
+    cnwn_OptionResult * results = malloc(sizeof(cnwn_OptionResult) * (argc + 1));
+    memset(results, 0, sizeof(cnwn_OptionResult) * (argc + 1));
+    int ret;
+    while (index < argc && (ret = cnwn_options_parse_argument(options, index, argc, argv, results + index)) != 0) {
+        if (ret > 0)
+            index += ret;
+        else
+            index++;
+    }
+    results[index].index = -1;
+    return results;
 }
