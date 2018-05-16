@@ -40,32 +40,32 @@ extern CNWN_PUBLIC int cnwn_resource_init_from_file_erf(cnwn_Resource * resource
  */
 extern CNWN_PUBLIC void cnwn_resource_deinit_erf(cnwn_Resource * resource);
 
-// /**
-//  * Default handler for ERF files.
-//  * @param resource The resource to get number of items from.
-//  * @returns The number of items.
-//  */
-// extern CNWN_PUBLIC int cnwn_resource_get_num_items_erf(const cnwn_Resource * resource);
+/**
+ * Default handler for ERF files.
+ * @param resource The resource.
+ * @returns The number of meta files.
+ */
+extern CNWN_PUBLIC int cnwn_resource_get_num_meta_files_erf(const cnwn_Resource * resource);
 
-// /**
-//  * Default handler for ERF files.
-//  * @param resource The resource to get item from.
-//  * @param index The index of the item, negative values will wrap from the end.
-//  * @param[out] ret_item Return the item here.
-//  * @returns The number of returned items (will be zero if the resource has no items or @p index is out of range).
-//  */
-// extern CNWN_PUBLIC int cnwn_resource_get_item_erf(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item);
+/**
+ * Default handler for ERF files.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @param[out] ret_meta_file Return the meta file.
+ * @returns The number of returned meta files or zero if @p index is out of range.
+ */
+extern CNWN_PUBLIC int cnwn_resource_get_meta_file_erf(const cnwn_Resource * resource, int index, cnwn_MetaFile * ret_meta_file);
 
-// /**
-//  * Default handler for ERF files.
-//  * @param resource The resource to extract an item from.
-//  * @param index The index of the item, negative values will wrap from the end.
-//  * @param source_f The source data of the resource, will be seeked.
-//  * @param destination_f Write the extracted item to this file.
-//  * @returns The number of written bytes or a negative value on error.
-//  * @see cnwn_get_error() if this function returns a negative value.
-//  */
-// extern CNWN_PUBLIC int64_t cnwn_resource_extract_item_erf(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f);
+/**
+ * Default handler for ERF files.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @param input_f The file to read the resource meta file from.
+ * @param output_f The file to write the resource meta file to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_meta_file_extract_erf(const cnwn_Resource * resource, int index, cnwn_File * input_f, cnwn_File * output_f);
 
 #ifdef __cplusplus
 }

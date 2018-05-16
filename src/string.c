@@ -241,7 +241,7 @@ int cnwn_strcat_va(char * r, int max_size, const char * sep, va_list args)
     int offset = 0;
     int slen = -1;
     while ((s = va_arg(args, char *)) != NULL && offset < max_size - 1) {
-        if (slen < 0 && seplen > 0) {
+        if (slen >= 0 && seplen > 0) {
             int copylen = CNWN_MINMAX(seplen, 0, max_size - offset - 1);
             if (r != NULL) {
                 if (copylen > 0)

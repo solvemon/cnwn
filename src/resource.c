@@ -9,13 +9,6 @@ static void cnwn_resource_array_deinit_elements(void * elements, int length)
         cnwn_resource_deinit(resources + i);
 }
 
-static void cnwn_meta_file_array_deinit_elements(void * elements, int length)
-{
-    cnwn_MetaFile * meta_files = elements;
-    for (int i = 0; i < length; i++)
-        cnwn_meta_file_deinit(meta_files + i);
-}
-
 bool cnwn_resource_name_valid(const char * name, const cnwn_Version * version)
 {
     if (version == NULL)
@@ -28,33 +21,6 @@ bool cnwn_resource_name_valid(const char * name, const cnwn_Version * version)
         if ((i >= 32 && version->minor == 1) || (i >= 16 && version->minor == 0) || !CNWN_RESOURCE_NAME_CHAR_VALID(name[i]))
             return false;
     return true;
-}
-
-void cnwn_meta_file_init(cnwn_MetaFile * meta_file, const char * name, const char * description, int64_t size)
-{
-    memset(meta_file, 0, sizeof(cnwn_MetaFile));
-    meta_file->name = cnwn_strdup(name);
-    meta_file->description = cnwn_strdup(description);
-    meta_file->size = CNWN_MAX(0, size);
-}
-
-void cnwn_meta_file_deinit(cnwn_MetaFile * meta_file)
-{
-    if (meta_file->name != NULL)
-        free(meta_file->name);
-    if (meta_file->description != NULL)
-        free(meta_file->description);
-    memset(meta_file, 0, sizeof(cnwn_MetaFile));
-}
-
-const char * cnwn_meta_file_get_name(const cnwn_MetaFile * meta_file)
-{
-    return meta_file != NULL && meta_file->name != NULL ? meta_file->name : "";
-}
-
-const char * cnwn_meta_file_get_description(const cnwn_MetaFile * meta_file)
-{
-    return meta_file != NULL && meta_file->description != NULL ? meta_file->description : "";
 }
 
 int cnwn_resource_init(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t offset, int64_t size, cnwn_Resource * parent)
@@ -81,16 +47,8 @@ int cnwn_resource_init(cnwn_Resource * resource, cnwn_ResourceType type, const c
     resource->offset = offset;
     resource->size = size;
     resource->parent = parent;
-    char filename[CNWN_PATH_MAX_SIZE];
-    if (resource->parent != NULL) 
-        snprintf(filename, sizeof(filename), "%s%s%s.%s", cnwn_resource_get_path(resource->parent), CNWN_PATH_SEPARATOR, resource->name, CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
-    else
-        snprintf(filename, sizeof(filename), "%s.%s", resource->name, CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
-    resource->path = cnwn_strdup(filename);
     cnwn_ContainerCallbacks cb_resources = {NULL, &cnwn_resource_array_deinit_elements, NULL};
     cnwn_array_init(&resource->resources, sizeof(cnwn_Resource), &cb_resources);
-    cnwn_ContainerCallbacks cb_meta_files = {NULL, &cnwn_meta_file_array_deinit_elements, NULL};
-    cnwn_array_init(&resource->meta_files, sizeof(cnwn_MetaFile), &cb_meta_files);    
     return 0;
 }
 
@@ -126,11 +84,8 @@ void cnwn_resource_deinit(cnwn_Resource * resource)
     if (handler != NULL && handler->callbacks.f_deinit != NULL) 
         handler->callbacks.f_deinit(resource);
     cnwn_array_deinit(&resource->resources);
-    cnwn_array_deinit(&resource->meta_files);
     if (resource->name != NULL)
         free(resource->name);
-    if (resource->path != NULL)
-        free(resource->path);
     memset(resource, 0, sizeof(cnwn_Resource));
 }
 
@@ -149,9 +104,16 @@ const char * cnwn_resource_get_name(const cnwn_Resource * resource)
     return resource->name != NULL ? resource->name : "";
 }
 
-const char * cnwn_resource_get_path(const cnwn_Resource * resource)
+int cnwn_resource_get_path(const cnwn_Resource * resource, int max_size, char * ret_path)
 {
-    return resource->path != NULL ? resource->path : "";
+    char filename[CNWN_PATH_MAX_SIZE];
+    if (resource->parent != NULL && resource->parent->parent != NULL) {
+        char parentpath[CNWN_PATH_MAX_SIZE];
+        cnwn_resource_get_path(resource->parent, sizeof(parentpath), parentpath);
+        snprintf(filename, sizeof(filename), "%s%s%s.%s", parentpath, CNWN_PATH_SEPARATOR, resource->name, CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
+    } else
+        snprintf(filename, sizeof(filename), "%s.%s", resource->name, CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
+    return cnwn_strcpy(ret_path, max_size, filename, -1);
 }
 
 int cnwn_resource_get_num_resources(const cnwn_Resource * resource)
@@ -187,6 +149,25 @@ int64_t cnwn_resource_extract(const cnwn_Resource * resource, cnwn_File * input_
     return ret;
 }
 
+int64_t cnwn_resource_extract_to_path(const cnwn_Resource * resource, cnwn_File * input_f, const char * path)
+{
+    char tmps[CNWN_PATH_MAX_SIZE];
+    cnwn_path_directorypart(tmps, sizeof(tmps), path);
+    if (!cnwn_strisblank(tmps)) {
+        int r = cnwn_file_system_mkdir(tmps);
+        if (r < 0)
+            return -1;
+    }
+    cnwn_File * output_f = cnwn_file_open(path, "wt");
+    if (output_f == NULL) {
+        cnwn_set_error("%s \"%s\"", cnwn_get_error(), path);
+        return -1;
+    }
+    int64_t ret = cnwn_resource_extract(resource, input_f, output_f);
+    cnwn_file_close(output_f);
+    return ret;
+}
+
 int64_t cnwn_resource_archive(const cnwn_Resource * resource, cnwn_File * input_f, cnwn_File * output_f)
 {
     if (cnwn_file_seek(input_f, resource->offset) < 0) {
@@ -212,12 +193,20 @@ int64_t cnwn_resource_archive(const cnwn_Resource * resource, cnwn_File * input_
 
 int cnwn_resource_get_num_meta_files(const cnwn_Resource * resource)
 {
-    return cnwn_array_get_length(&resource->meta_files);
+    const cnwn_ResourceHandler * handler = CNWN_RESOURCE_HANDLER(resource->type);
+    if (handler != NULL && handler->callbacks.f_get_num_meta_files != NULL)
+        return handler->callbacks.f_get_num_meta_files(resource);
+    return 0;
 }
 
-const cnwn_MetaFile * cnwn_resource_get_meta_file(const cnwn_Resource * resource, int index)
+int cnwn_resource_get_meta_file(const cnwn_Resource * resource, int index, cnwn_MetaFile * ret_meta_file)
 {
-    return cnwn_array_element_ptr(&resource->meta_files, index);
+    const cnwn_ResourceHandler * handler = CNWN_RESOURCE_HANDLER(resource->type);
+    if (handler != NULL && handler->callbacks.f_get_meta_file != NULL)
+        return handler->callbacks.f_get_meta_file(resource, index, ret_meta_file);
+    if (ret_meta_file != NULL)
+        memset(ret_meta_file, 0, sizeof(cnwn_MetaFile));
+    return 0;
 }
 
 int64_t cnwn_resource_meta_file_extract(const cnwn_Resource * resource, int index, cnwn_File * input_f, cnwn_File * output_f)
@@ -227,11 +216,38 @@ int64_t cnwn_resource_meta_file_extract(const cnwn_Resource * resource, int inde
         cnwn_set_error("invalid type when getting handler (%s)", resource->name);
         return -1;
     }
-    int64_t ret = 0;
-    if (handler->callbacks.f_meta_file_extract != NULL)
-        ret = handler->callbacks.f_meta_file_extract(resource, index, input_f, output_f);
-    if (ret < 0) 
-        cnwn_set_error("%s (%s)", cnwn_get_error(), resource->name);        
+    int num_meta_files = cnwn_resource_get_num_meta_files(resource);
+    int use_index = index;
+    if (use_index < 0)
+        use_index += num_meta_files;
+    if (use_index >= 0 && use_index < num_meta_files) {
+        int64_t ret = 0;
+        if (handler->callbacks.f_meta_file_extract != NULL)
+            ret = handler->callbacks.f_meta_file_extract(resource, use_index, input_f, output_f);
+        if (ret < 0) 
+            cnwn_set_error("%s (%s)", cnwn_get_error(), resource->name);
+        return ret;
+    }
+    cnwn_set_error("invalid meta file index (%d)", index);
+    return -1;
+}
+
+int64_t cnwn_resource_meta_file_extract_to_path(const cnwn_Resource * resource, int index, cnwn_File * input_f, const char * path)
+{
+    char tmps[CNWN_PATH_MAX_SIZE];
+    cnwn_path_directorypart(tmps, sizeof(tmps), path);
+    if (!cnwn_strisblank(tmps)) {
+        int r = cnwn_file_system_mkdir(tmps);
+        if (r < 0)
+            return -1;
+    }
+    cnwn_File * output_f = cnwn_file_open(path, "wt");
+    if (output_f == NULL) {
+        cnwn_set_error("%s \"%s\"", cnwn_get_error(), path);
+        return -1;
+    }
+    int64_t ret = cnwn_resource_meta_file_extract(resource, index, input_f, output_f);
+    cnwn_file_close(output_f);
     return ret;
 }
 

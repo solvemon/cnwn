@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.2)
 project(cnwn C)
 
 include(GNUInstallDirs)
-#include(ExternalProject)
+include(ExternalProject)
 include(TestBigEndian)
 
 set(VERSION_MAJOR 0)
@@ -27,7 +27,7 @@ option(BUILD_TESTS "Build tests" ON)
 option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_XML "Build XML support" ON)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 add_definitions(-DBUILD_VERSION_MAJOR=${VERSION_MAJOR} -DBUILD_VERSION_MINOR=${VERSION_MINOR} -DBUILD_VERSION_PATCH=${VERSION_PATCH})
 add_definitions(-D_POSIX_C_SOURCE=200112L)
@@ -47,7 +47,6 @@ if (BUILD_XML)
   add_definitions(-DBUILD_XML)
 endif()
 
-
 set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common.c
   ${CMAKE_CURRENT_SOURCE_DIR}/src/endian.c
@@ -65,13 +64,14 @@ set(LIBRARY_SOURCE_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/cnwna.c
   )
 
-
 add_library(cnwn-shared SHARED ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-shared PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-#target_link_libraries(cnwn-shared ${CMAKE_CURRENT_BINARY_DIR}/lib/libmxml.a)
 #add_dependencies(cnwn-shared)
+#target_link_libraries(cnwn-shared)
 add_library(cnwn-static STATIC ${LIBRARY_SOURCE_FILES})
 set_target_properties(cnwn-static PROPERTIES COMPILE_DEFINITIONS BUILD_API OUTPUT_NAME "cnwn" SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+#add_dependencies(cnwn-static)
+#target_link_libraries(cnwn-static)
 
 if(BUILD_TOOLS)
   add_executable(cnwna src/cnwna-main.c)
@@ -80,19 +80,26 @@ endif()
 
 if(BUILD_TESTS)
   add_executable(test-string tests/test-string.c)
-  target_link_libraries(test-string cnwn-shared)
+  target_link_libraries(test-string cnwn-static)
   add_executable(test-path tests/test-path.c)
-  target_link_libraries(test-path cnwn-shared)
+  target_link_libraries(test-path cnwn-static)
   add_executable(test-file_system tests/test-file_system.c)
-  target_link_libraries(test-file_system cnwn-shared)
+  target_link_libraries(test-file_system cnwn-static)
   add_executable(test-options tests/test-options.c)
-  target_link_libraries(test-options cnwn-shared)
+  target_link_libraries(test-options cnwn-static)
   add_executable(test-resource tests/test-resource.c)
-  target_link_libraries(test-resource cnwn-shared)
+  target_link_libraries(test-resource cnwn-static)
 endif()
 
 install(TARGETS cnwn-shared DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-#install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cnwn.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+install(TARGETS cnwn-static DESTINATION "${CMAKE_INSTALL_LIBDIR}")
+
+install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/cnwn
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.h*"
+    )
+
 
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
@@ -108,4 +115,3 @@ if(DOXYGEN_FOUND)
 else (DOXYGEN_FOUND)
   message("No doxygen = no docs!")
 endif (DOXYGEN_FOUND)
-

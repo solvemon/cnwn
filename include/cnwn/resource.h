@@ -27,11 +27,6 @@
 /**
  * @see cnwn_Array
  */
-typedef cnwn_Array cnwn_MetaFileArray;
-
-/**
- * @see cnwn_Array
- */
 typedef cnwn_Array cnwn_ResourceArray;
 
 /**
@@ -108,6 +103,22 @@ typedef int64_t (*cnwn_ResourceExtract)(const cnwn_Resource * resource, cnwn_Fil
 typedef int64_t (*cnwn_ResourceArchive)(const cnwn_Resource * resource, cnwn_File * input_f, cnwn_File * output_f);
 
 /**
+ * Get the number of meta files the resource has.
+ * @param resource The resource.
+ * @returns The number of meta files in the resource.
+ */
+typedef int (*cnwn_ResourceGetNumMetaFiles)(const cnwn_Resource * resource);
+
+/**
+ * Get a meta file from the resource.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @param[out] ret_meta_file Return the meta file.
+ * @returns The number of returned meta files or zero if @p index is out of range.
+ */
+typedef int (*cnwn_ResourceGetMetaFile)(const cnwn_Resource * resource, int index, cnwn_MetaFile * ret_meta_file);
+
+/**
  * Extract a resource (binary) meta file.
  * @param resource The resource.
  * @param index The index of the meta file, negative values will wrap from the end.
@@ -160,6 +171,16 @@ struct cnwn_ResourceCallbacks_s {
     cnwn_ResourceArchive f_archive;
 
     /**
+     * @see cnwn_ResourceGetNumMetaFiles
+     */
+    cnwn_ResourceGetNumMetaFiles f_get_num_meta_files;
+
+    /**
+     * @see cnwn_ResourceGetMetaFile
+     */
+    cnwn_ResourceGetMetaFile f_get_meta_file;
+    
+    /**
      * @see cnwn_ResourceMetaFileExtract
      */
     cnwn_ResourceMetaFileExtract f_meta_file_extract;
@@ -178,12 +199,12 @@ struct cnwn_MetaFile_s {
     /**
      * The name of the meta file.
      */
-    char * name;
+    char name[128];
 
     /**
      * A description of the meta file.
      */
-    char * description;
+    char description[128];
 
     /**
      * The size of the meta file (in bytes).
@@ -276,11 +297,6 @@ struct cnwn_Resource_s {
      * The name.
      */
     char * name;
-
-    /**
-     * The path to the resource.
-     */
-    char * path;
     
     /**
      * Offset in a file.
@@ -301,11 +317,6 @@ struct cnwn_Resource_s {
      * The child resources.
      */
     cnwn_ResourceArray resources;
-
-    /**
-     * The subresources.
-     */
-    cnwn_MetaFileArray meta_files;
 
     /**
      * Resource specific data.
@@ -354,35 +365,6 @@ extern CNWN_PUBLIC cnwn_ResourceHandler CNWN_RESOURCE_HANDLERS[CNWN_MAX_RESOURCE
  * A valid name: max 16 (32 for 1.1) characters, only ascii alpha, digits and underscore allowed.
  */
 extern CNWN_PUBLIC bool cnwn_resource_name_valid(const char * name, const cnwn_Version * version);
-
-/**
- * Initialize a meta file struct.
- * @param meta_file The meta file struct to initialize.
- * @param name The name of the meta file.
- * @param description The description of the meta file.
- * @param size The size of the meta file.
- */
-extern CNWN_PUBLIC void cnwn_meta_file_init(cnwn_MetaFile * meta_file, const char * name, const char * description, int64_t size);
-
-/**
- * Deinitialize a meta file.
- * @param meta_file The meta file to deinitialize.
- */
-extern CNWN_PUBLIC void cnwn_meta_file_deinit(cnwn_MetaFile * meta_file);
-
-/**
- * Get the name from a meta file.
- * @param meta_file The meta file.
- * @returns The name.
- */
-extern CNWN_PUBLIC const char * cnwn_meta_file_get_name(const cnwn_MetaFile * meta_file);
-
-/**
- * Get the description from a meta file.
- * @param meta_file The meta file.
- * @returns The description.
- */
-extern CNWN_PUBLIC const char * cnwn_meta_file_get_description(const cnwn_MetaFile * meta_file);
 
 /**
  * Vanilla initialization of a resource.
@@ -452,9 +434,11 @@ extern CNWN_PUBLIC const char * cnwn_resource_get_name(const cnwn_Resource * res
 /**
  * Get the resource path.
  * @param resource The resource.
- * @returns The resource path, will return an empty string if the resource has no path associated with it.
+ * @param max_size The maximum size of the return string (including zero terminator).
+ * @param[out] ret_path Return the path here, pass NULL to get the required length.
+ * @returns The length of the returned path (excluding zero terminator):
  */
-extern CNWN_PUBLIC const char * cnwn_resource_get_path(const cnwn_Resource * resource);
+extern CNWN_PUBLIC int cnwn_resource_get_path(const cnwn_Resource * resource, int max_size, char * ret_path);
 
 /**
  * Get the number of resources.
@@ -482,6 +466,17 @@ extern CNWN_PUBLIC cnwn_Resource * cnwn_resource_get_resource(const cnwn_Resourc
 extern CNWN_PUBLIC int64_t cnwn_resource_extract(const cnwn_Resource * resource, cnwn_File * input_f, cnwn_File * output_f);
 
 /**
+ * Extract a resource (binary).
+ * @param resource The resource.
+ * @param input_f The file to read the resource from, will seek to the right offset based on the resource->offset.
+ * @param path The file to create and write the meta file data to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ * @note If any directories are missing they will be created.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_extract_to_path(const cnwn_Resource * resource, cnwn_File * input_f, const char * path);
+
+/**
  * Archive a resource (binary).
  * @param resource The resource.
  * @param input_f The file to read the resource from.
@@ -502,9 +497,10 @@ extern CNWN_PUBLIC int cnwn_resource_get_num_meta_files(const cnwn_Resource * re
  * Get a meta file from the resource.
  * @param resource The resource.
  * @param index The index of the meta file, negative values will wrap from the end.
- * @returns The meta file or NULL if @p index is out of range.
+ * @param[out] ret_meta_file Return the meta file.
+ * @returns The number of returned meta files or zero if @p index is out of range.
  */
-extern CNWN_PUBLIC const cnwn_MetaFile * cnwn_resource_get_meta_file(const cnwn_Resource * resource, int index);
+extern CNWN_PUBLIC int cnwn_resource_get_meta_file(const cnwn_Resource * resource, int index, cnwn_MetaFile * ret_meta_file);
 
 /**
  * Extract a resource (binary) meta file.
@@ -516,6 +512,18 @@ extern CNWN_PUBLIC const cnwn_MetaFile * cnwn_resource_get_meta_file(const cnwn_
  * @see cnwn_get_error() if this function returns a negative value.
  */
 extern CNWN_PUBLIC int64_t cnwn_resource_meta_file_extract(const cnwn_Resource * resource, int index, cnwn_File * input_f, cnwn_File * output_f);
+
+/**
+ * Extract a resource (binary) meta file.
+ * @param resource The resource.
+ * @param index The index of the meta file, negative values will wrap from the end.
+ * @param input_f The file to read the resource meta file from.
+ * @param path The file to create and write the meta file data to.
+ * @returns The number of bytes written to @p output_f or a negative value on error.
+ * @see cnwn_get_error() if this function returns a negative value.
+ * @note If any directories are missing they will be created.
+ */
+extern CNWN_PUBLIC int64_t cnwn_resource_meta_file_extract_to_path(const cnwn_Resource * resource, int index, cnwn_File * input_f, const char * path);
 
 /**
  * Archive a resource (binary) meta file.

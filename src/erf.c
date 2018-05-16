@@ -3,10 +3,15 @@
 const cnwn_ResourceHandler CNWN_RESOURCE_HANDLER_ERF = {
     "ERF",
     {
-        &cnwn_resource_init_from_file_erf,
-        NULL,
-        cnwn_resource_deinit_erf,    
-        NULL
+        &cnwn_resource_init_from_file_erf, // init1
+        NULL, // init2
+        &cnwn_resource_deinit_erf, // deinit
+        NULL, // extract
+        NULL, // archive
+        &cnwn_resource_get_num_meta_files_erf, // get num meta
+        &cnwn_resource_get_meta_file_erf, // get meta
+        &cnwn_resource_meta_file_extract_erf, // extract meta
+        NULL // archive meta
     }
 };
 
@@ -57,10 +62,11 @@ int cnwn_resource_init_from_file_erf(cnwn_Resource * resource, cnwn_File * f)
         cnwn_set_error("trying to init ERF from non-ERF type (%s)", resource->r.r_erf.typestr);
         return -1;
     }
-    if (resource->type != rtype) {
-        cnwn_set_error("ERF contains different type (got %s, expected %s)", CNWN_RESOURCE_TYPE_EXTENSION(rtype), CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
-        return -1;
-    }
+    resource->type = rtype;
+    // if (resource->type != rtype) {
+    //     cnwn_set_error("ERF contains different type (got %s, expected %s)", CNWN_RESOURCE_TYPE_EXTENSION(rtype), CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
+    //     return -1;
+    // }
     ret = cnwn_file_read_string(f, 5, resource->r.r_erf.versionstr);
     if (ret < 0) {
         cnwn_set_error("%s (%s)", cnwn_get_error(), "reading version");
@@ -215,85 +221,70 @@ void cnwn_resource_deinit_erf(cnwn_Resource * resource)
 {
 }
 
-// int cnwn_resource_get_num_items_erf(const cnwn_Resource * resource)
-// {
-//     if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
-//         cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
-//         return -1;
-//     }
-//     return 3;
-// }
+int cnwn_resource_get_num_meta_files_erf(const cnwn_Resource * resource)
+{
+    if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
+        cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
+        return -1;
+    }
+    return 2;
+}
 
-// int cnwn_resource_get_item_erf(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item)
-// {
-//     if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
-//         cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
-//         return -1;
-//     }
-//     if (index == 0) {
-//         if (ret_item != NULL) {
-//             snprintf(ret_item->filename, sizeof(ret_item->filename), "type.info");
-//             ret_item->size = 4;
-//         }
-//         return 1;
-//     } else if (index == 1) {
-//         if (ret_item != NULL) {
-//             snprintf(ret_item->filename, sizeof(ret_item->filename), "version.info");
-//             ret_item->size = 4;
-//         }
-//         return 1;
-//     } else if (index == 2) {
-//         if (ret_item != NULL) {
-//             snprintf(ret_item->filename, sizeof(ret_item->filename), "strings.info");
-//             ret_item->size = resource->r.r_erf.localized_strings_size;
-//         }
-//         return 1;
-//     }
-//     return 0;
-// }
+int cnwn_resource_get_meta_file_erf(const cnwn_Resource * resource, int index, cnwn_MetaFile * ret_meta_file)
+{
+    if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
+        cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
+        return -1;
+    }
+    if (index == 0) {
+        if (ret_meta_file != NULL) {
+            cnwn_strcpy(ret_meta_file->name, sizeof(ret_meta_file->name), "erf-header", -1);
+            cnwn_strcpy(ret_meta_file->description, sizeof(ret_meta_file->description), "ERF header", -1);
+            ret_meta_file->size = 160;
+        }
+        return 1;
+    } else if (index == 1) {
+        if (ret_meta_file != NULL) {
+            cnwn_strcpy(ret_meta_file->name, sizeof(ret_meta_file->name), "erf-strings", -1);
+            cnwn_strcpy(ret_meta_file->description, sizeof(ret_meta_file->description), "ERF localized strings", -1);
+            ret_meta_file->size = resource->r.r_erf.localized_strings_size;
+        }
+        return 1;
+    }
+    return 0;
+}
 
-// int64_t cnwn_resource_extract_item_erf(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f)
-// {
-//     if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
-//         cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
-//         return -1;
-//     }
-//     int64_t retbytes = 0;
-//     int64_t ret;
-//     if (index == 0) {
-//         char tmps[128] = {0};
-//         const cnwn_ResourceTypeInfo * info = cnwn_resource_type_info(resource->type);
-//         snprintf(tmps, sizeof(tmps), "%s\n", info->extension);
-//         cnwn_strupper(tmps, sizeof(tmps), tmps);
-//         printf("%s %d\n", tmps, resource->type);
-//         ret = cnwn_file_write_string(destination_f, tmps);
-//         if (ret < 0) {
-//             cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
-//             return -1;
-//         }
-//         retbytes += ret;
-//     } else if (index == 1) {
-//         char tmps[128] = {0};
-//         snprintf(tmps, sizeof(tmps), "V%d.%d\n", resource->r.r_erf.major_version, resource->r.r_erf.minor_version);
-//         cnwn_strupper(tmps, sizeof(tmps), tmps);
-//         ret = cnwn_file_write_string(destination_f, tmps);
-//         if (ret < 0) {
-//             cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
-//             return -1;
-//         }
-//         retbytes += ret;
-//     } else if (index == 2) {
-//         ret = cnwn_file_seek(source_f, resource->offset + resource->r.r_erf.localized_strings_offset);
-//         if (ret < 0) {
-//             cnwn_set_error("%s (%s)", cnwn_get_error(), "seek");
-//             return -1;
-//         }
-//         ret = cnwn_file_copy(source_f, resource->r.r_erf.localized_strings_size, destination_f);
-//         if (ret < 0) {
-//             cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
-//             return -1;
-//         }
-//         retbytes += ret;
-//     }
-//     return retbytes;
-// }
+int64_t cnwn_resource_meta_file_extract_erf(const cnwn_Resource * resource, int index, cnwn_File * input_f, cnwn_File * output_f)
+{
+    if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
+        cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
+        return -1;
+    }
+    if (index == 0) {
+        int64_t ret = cnwn_file_seek(input_f, 0);
+        if (ret < 0) {
+            cnwn_set_error("%s (%s)", cnwn_get_error(), "seek");
+            return -1;
+        }
+        ret = cnwn_file_copy(input_f, 160, output_f);
+        if (ret < 0) {
+            cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
+            return -1;
+        }
+        return ret;
+    } else if (index == 1) {
+        int64_t ret = cnwn_file_seek(input_f, resource->r.r_erf.localized_strings_offset);
+        if (ret < 0) {
+            cnwn_set_error("%s (%s)", cnwn_get_error(), "seek");
+            return -1;
+        }
+        ret = cnwn_file_copy(input_f, resource->r.r_erf.localized_strings_size, output_f);
+        if (ret < 0) {
+            cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
+            return -1;
+        }
+        return ret;
+    }
+    cnwn_set_error("invalid meta file index (erf %d)", index);
+    return -1;
+}
