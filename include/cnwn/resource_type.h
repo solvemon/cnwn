@@ -36,6 +36,13 @@
 #define CNWN_RESOURCE_TYPE_IS_CONTAINER(t) (CNWN_RESOURCE_TYPE_IS_ERF(t) || (t) == CNWN_RESOURCE_TYPE_BIF)
 
 /**
+ * Get the resource type filename extension.
+ * @param t The resource type.
+ * @returns Returns the extention or a pointer to an empty string if @p t is invalid.
+ */
+#define CNWN_RESOURCE_TYPE_EXTENSION(t) (CNWN_RESOURCE_TYPE_VALID((t)) ? CNWN_RESOURCE_TYPE_INFOS[(t)].extension : "")
+
+/**
  * Resource types.
  */
 enum cnwn_ResourceType_e {

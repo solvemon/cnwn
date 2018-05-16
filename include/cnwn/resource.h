@@ -45,6 +45,11 @@ typedef struct cnwn_MetaFile_s cnwn_MetaFile;
 typedef struct cnwn_ResourceCallbacks_s cnwn_ResourceCallbacks;
 
 /**
+ * @see struct cnwn_ResourceERF_s
+ */
+typedef struct cnwn_ResourceERF_s cnwn_ResourceERF;
+
+/**
  * @see struct cnwn_Resource_s
  */
 typedef struct cnwn_Resource_s cnwn_Resource;
@@ -187,6 +192,77 @@ struct cnwn_MetaFile_s {
 };
 
 /**
+ * ERF specific data.
+ */
+struct cnwn_ResourceERF_s {
+    
+    /**
+     * The ERF type (as represented in a file).
+     */
+    char typestr[5];
+
+    /**
+     * The ERF version (as represented in a file).
+     */
+    char versionstr[5];
+
+    /**
+     * Version.
+     */
+    cnwn_Version version;
+
+    /**
+     * The number of localized strings.
+     */
+    uint32_t num_localized_strings;
+
+    /**
+     * The localized strings offset.
+     */
+    uint32_t localized_strings_offset;
+
+    /**
+     * The localized strings size.
+     */
+    uint32_t localized_strings_size;
+
+    /**
+     * Keys offset.
+     */
+    uint32_t keys_offset;
+
+    /**
+     * Values offset.
+     */
+    uint32_t values_offset;
+
+    /**
+     * Year.
+     */
+    uint32_t year;
+
+    /**
+     * Day of year.
+     */
+    uint32_t day_of_year;
+
+    /**
+     * Descripting stringref.
+     */
+    uint32_t description_strref;
+    
+    /**
+     * Resources offset.
+     */
+    uint32_t resources_offset;
+
+    /**
+     * The rest of the header.
+     */
+    uint8_t rest[116];
+};
+
+/**
  * A resource.
  */
 struct cnwn_Resource_s {
@@ -230,6 +306,17 @@ struct cnwn_Resource_s {
      * The subresources.
      */
     cnwn_MetaFileArray meta_files;
+
+    /**
+     * Resource specific data.
+     */
+    union {
+
+        /**
+         * ERF (erf, hak, mod and nwm files).
+         */
+        cnwn_ResourceERF r_erf;
+    } r;
 };
 
 /**

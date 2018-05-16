@@ -17,7 +17,9 @@ const cnwn_ResourceTypeInfo CNWN_RESOURCE_TYPE_INFOS[CNWN_MAX_RESOURCE_TYPE] = {
     {2001, "tex", "texture"},
     {2002, "mdl", ""},
     {2003, "thg", ""},
+    {-1, NULL, NULL},
     {2005, "fnt", "font"},
+    {-1, NULL, NULL},
     {2007, "lua", "lua script"},
     {2008, "slt", ""},
     {2009, "nss", "nwscript"},
@@ -125,11 +127,17 @@ const cnwn_ResourceTypeInfo CNWN_RESOURCE_TYPE_INFO_INVALID = {-1, NULL, NULL};
 cnwn_ResourceType cnwn_resource_type_from_path(const char * path)
 {
     char extension[CNWN_PATH_MAX_SIZE];
-    cnwn_path_extensionpart(extension, sizeof(extension), path);
-    cnwn_path_filenamepart(extension, sizeof(extension), extension);
-    for (int i = 0; i < CNWN_MAX_RESOURCE_TYPE && CNWN_RESOURCE_TYPE_INFOS[i].type >= 0 && CNWN_RESOURCE_TYPE_INFOS[i].type < CNWN_MAX_RESOURCE_TYPE; i++) 
-        if (cnwn_strcmpi(CNWN_RESOURCE_TYPE_INFOS[i].extension, extension) == 0)
+    if (cnwn_path_extensionpart(extension, sizeof(extension), path) == 0)
+        cnwn_path_filenamepart(extension, sizeof(extension), path);
+    else
+        cnwn_path_filenamepart(extension, sizeof(extension), extension);
+    cnwn_strstrip(extension, sizeof(extension), extension);
+    cnwn_strlower(extension, sizeof(extension), extension);
+    for (int i = 0; i < CNWN_MAX_RESOURCE_TYPE; i++) {
+        if (!cnwn_strisblank(CNWN_RESOURCE_TYPE_INFOS[i].extension)
+            && cnwn_strcmp(CNWN_RESOURCE_TYPE_INFOS[i].extension, extension) == 0)
             return i;
+    }
     return CNWN_RESOURCE_TYPE_INVALID;
 }
 

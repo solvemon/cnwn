@@ -1,13 +1,13 @@
 #include "cnwn/erf.h"
 
 const cnwn_ResourceHandler CNWN_RESOURCE_HANDLER_ERF = {
-    cnwn_resource_init_extract_erf,
-    cnwn_resource_init_archive_erf,
-    cnwn_resource_deinit_erf,
-    cnwn_resource_get_num_items_erf,
-    cnwn_resource_get_item_erf,
-    cnwn_resource_extract_item_erf,
-    NULL
+    "ERF",
+    {
+        &cnwn_resource_init_from_file_erf,
+        NULL,
+        cnwn_resource_deinit_erf,    
+        NULL
+    }
 };
 
 typedef struct cnwn_Entry_s {
@@ -19,48 +19,56 @@ typedef struct cnwn_Entry_s {
     uint16_t unused;    
 } cnwn_Entry;
 
-int cnwn_resource_init_extract_erf(cnwn_Resource * resource, int64_t size, cnwn_File * f)
+
+cnwn_Version cnwn_erf_parse_version(const char * s)
+{
+    cnwn_Version ret = {0};
+    if (s != NULL
+        && (s[0] == 'V' || s[0] == 'v')
+        && s[1] >= '0' && s[1] <= '9'
+        && s[2] == '.'
+        && s[3] >= '0' && s[3] <= '9'
+        && ((s[4] >= '0' && s[4] <= '9') || s[4] == 0 || s[4] == 32)) {
+        ret.major = (int)s[1] - 48;
+        ret.major = (int)s[1] - 48;
+        if (s[4] > 32) {
+            ret.minor = ((int)s[3] - 48) * 10;
+            ret.minor += s[4] - 48;
+        } else
+            ret.minor = s[3] - 48;
+    }
+    return ret;
+}
+
+int cnwn_resource_init_from_file_erf(cnwn_Resource * resource, cnwn_File * f)
 {
     if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
         cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
         return -1;
     }
     int64_t ret;
-    ret = cnwn_file_read_string(f, 5, resource->r.r_erf.erf_type);
+    ret = cnwn_file_read_string(f, 5, resource->r.r_erf.typestr);
     if (ret < 0) {
         cnwn_set_error("%s (%s)", cnwn_get_error(), "reading filetype");
         return -1;
     }
-    if (resource->r.r_erf.erf_type[0] == 'M' && resource->r.r_erf.erf_type[1] == 'O' && resource->r.r_erf.erf_type[2] == 'D')
-        resource->r.r_erf.type = CNWN_RESOURCE_TYPE_MOD;
-    else if (resource->r.r_erf.erf_type[0] == 'E' && resource->r.r_erf.erf_type[1] == 'R' && resource->r.r_erf.erf_type[2] == 'F')
-        resource->r.r_erf.type = CNWN_RESOURCE_TYPE_ERF;
-    else if (resource->r.r_erf.erf_type[0] == 'H' && resource->r.r_erf.erf_type[1] == 'A' && resource->r.r_erf.erf_type[2] == 'K')
-        resource->r.r_erf.type = CNWN_RESOURCE_TYPE_HAK;
-    else if (resource->r.r_erf.erf_type[0] == 'N' && resource->r.r_erf.erf_type[1] == 'W' && resource->r.r_erf.erf_type[2] == 'M')
-        resource->r.r_erf.type = CNWN_RESOURCE_TYPE_NWM;
-    else {
-        cnwn_set_error("invalid ERF type \"%s\"", resource->r.r_erf.erf_type);
+    cnwn_ResourceType rtype = cnwn_resource_type_from_path(resource->r.r_erf.typestr);
+    if (!CNWN_RESOURCE_TYPE_IS_ERF(rtype)) {
+        cnwn_set_error("trying to init ERF from non-ERF type (%s)", resource->r.r_erf.typestr);
         return -1;
     }
-    resource->type = resource->r.r_erf.type;
-    ret = cnwn_file_read_string(f, 5, resource->r.r_erf.erf_version);
+    if (resource->type != rtype) {
+        cnwn_set_error("ERF contains different type (got %s, expected %s)", CNWN_RESOURCE_TYPE_EXTENSION(rtype), CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
+        return -1;
+    }
+    ret = cnwn_file_read_string(f, 5, resource->r.r_erf.versionstr);
     if (ret < 0) {
         cnwn_set_error("%s (%s)", cnwn_get_error(), "reading version");
         return -1;
     }        
-    resource->r.r_erf.major_version = resource->r.r_erf.erf_version[1] - 48;
-    if (resource->r.r_erf.erf_version[4] > 32) {
-        resource->r.r_erf.minor_version = (resource->r.r_erf.erf_version[3] - 48) * 10;
-        resource->r.r_erf.minor_version += resource->r.r_erf.erf_version[4] - 48;
-    } else
-        resource->r.r_erf.minor_version = resource->r.r_erf.erf_version[3] - 48;
-    if (resource->r.r_erf.erf_version[0] != 'V' || resource->r.r_erf.erf_version[2] != '.') {
-        cnwn_set_error("invalid version \"%s\"", resource->r.r_erf.erf_version);
-        return -1;
-    }
-    if (resource->r.r_erf.major_version != 1 || (resource->r.r_erf.minor_version != 0 && resource->r.r_erf.minor_version != 1)) {
-        cnwn_set_error("%s (%s %d.%d)", cnwn_get_error(), "unsupported version", resource->r.r_erf.major_version, resource->r.r_erf.minor_version);
+    resource->r.r_erf.version = cnwn_erf_parse_version(resource->r.r_erf.versionstr);
+    if (resource->r.r_erf.version.major != 1 || (resource->r.r_erf.version.minor != 0 && resource->r.r_erf.version.minor != 1)) {
+        cnwn_set_error("unsupported version (%s %d.%d)", resource->r.r_erf.versionstr, resource->r.r_erf.version.major, resource->r.r_erf.version.minor);
         return -1;
     }
     ret = cnwn_file_readu32(f, &resource->r.r_erf.num_localized_strings);
@@ -129,7 +137,7 @@ int cnwn_resource_init_extract_erf(cnwn_Resource * resource, int64_t size, cnwn_
             cnwn_set_error("%s (%s %u)", cnwn_get_error(), "seeking keys offset", resource->r.r_erf.keys_offset);
             return -1;
         }
-        int key_size = (resource->r.r_erf.minor_version > 0 ? 32 : 16);
+        int key_size = (resource->r.r_erf.version.minor > 0 ? 32 : 16);
         cnwn_Entry * entries = malloc(sizeof(cnwn_Entry) * num_entries);
         memset(entries, 0, sizeof(cnwn_Entry) * num_entries);
         for (int i = 0; i < num_entries; i++) {
@@ -190,7 +198,7 @@ int cnwn_resource_init_extract_erf(cnwn_Resource * resource, int64_t size, cnwn_
         }
         for (int i = 0; i < num_entries; i++) {
             cnwn_Resource subresource;
-            int ret = cnwn_resource_init_extract(&subresource, entries[i].type, entries[i].key, entries[i].size, f);
+            int ret = cnwn_resource_init_from_file(&subresource, entries[i].type, entries[i].key, entries[i].size, resource, f);
             if (ret < 0) {
                 cnwn_set_error("%s (%s \"%s\")", cnwn_get_error(), "subresource", entries[i].key);
                 free(entries);
@@ -203,99 +211,89 @@ int cnwn_resource_init_extract_erf(cnwn_Resource * resource, int64_t size, cnwn_
     return 0;
 }
 
-int cnwn_resource_init_archive_erf(cnwn_Resource * resource)
-{
-    if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
-        cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
-        return -1;
-    }
-    
-    return -1;
-}
-
 void cnwn_resource_deinit_erf(cnwn_Resource * resource)
 {
 }
 
-int cnwn_resource_get_num_items_erf(const cnwn_Resource * resource)
-{
-    if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
-        cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
-        return -1;
-    }
-    return 3;
-}
+// int cnwn_resource_get_num_items_erf(const cnwn_Resource * resource)
+// {
+//     if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
+//         cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
+//         return -1;
+//     }
+//     return 3;
+// }
 
-int cnwn_resource_get_item_erf(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item)
-{
-    if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
-        cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
-        return -1;
-    }
-    if (index == 0) {
-        if (ret_item != NULL) {
-            snprintf(ret_item->filename, sizeof(ret_item->filename), "type.info");
-            ret_item->size = 4;
-        }
-        return 1;
-    } else if (index == 1) {
-        if (ret_item != NULL) {
-            snprintf(ret_item->filename, sizeof(ret_item->filename), "version.info");
-            ret_item->size = 4;
-        }
-        return 1;
-    } else if (index == 2) {
-        if (ret_item != NULL) {
-            snprintf(ret_item->filename, sizeof(ret_item->filename), "strings.info");
-            ret_item->size = resource->r.r_erf.localized_strings_size;
-        }
-        return 1;
-    }
-    return 0;
-}
+// int cnwn_resource_get_item_erf(const cnwn_Resource * resource, int index, cnwn_ResourceItem * ret_item)
+// {
+//     if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
+//         cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
+//         return -1;
+//     }
+//     if (index == 0) {
+//         if (ret_item != NULL) {
+//             snprintf(ret_item->filename, sizeof(ret_item->filename), "type.info");
+//             ret_item->size = 4;
+//         }
+//         return 1;
+//     } else if (index == 1) {
+//         if (ret_item != NULL) {
+//             snprintf(ret_item->filename, sizeof(ret_item->filename), "version.info");
+//             ret_item->size = 4;
+//         }
+//         return 1;
+//     } else if (index == 2) {
+//         if (ret_item != NULL) {
+//             snprintf(ret_item->filename, sizeof(ret_item->filename), "strings.info");
+//             ret_item->size = resource->r.r_erf.localized_strings_size;
+//         }
+//         return 1;
+//     }
+//     return 0;
+// }
 
-int64_t cnwn_resource_extract_item_erf(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f)
-{
-    if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
-        cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
-        return -1;
-    }
-    int64_t retbytes = 0;
-    int64_t ret;
-    if (index == 0) {
-        char tmps[128] = {0};
-        const cnwn_ResourceTypeInfo * info = cnwn_resource_type_info(resource->type);
-        snprintf(tmps, sizeof(tmps), "%s\n", info->extension);
-        cnwn_strupper(tmps, sizeof(tmps), tmps);
-        printf("%s %d\n", tmps, resource->type);
-        ret = cnwn_file_write_string(destination_f, tmps);
-        if (ret < 0) {
-            cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
-            return -1;
-        }
-        retbytes += ret;
-    } else if (index == 1) {
-        char tmps[128] = {0};
-        snprintf(tmps, sizeof(tmps), "V%d.%d\n", resource->r.r_erf.major_version, resource->r.r_erf.minor_version);
-        cnwn_strupper(tmps, sizeof(tmps), tmps);
-        ret = cnwn_file_write_string(destination_f, tmps);
-        if (ret < 0) {
-            cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
-            return -1;
-        }
-        retbytes += ret;
-    } else if (index == 2) {
-        ret = cnwn_file_seek(source_f, resource->offset + resource->r.r_erf.localized_strings_offset);
-        if (ret < 0) {
-            cnwn_set_error("%s (%s)", cnwn_get_error(), "seek");
-            return -1;
-        }
-        ret = cnwn_file_copy(source_f, resource->r.r_erf.localized_strings_size, destination_f);
-        if (ret < 0) {
-            cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
-            return -1;
-        }
-        retbytes += ret;
-    }
-    return retbytes;
-}
+// int64_t cnwn_resource_extract_item_erf(const cnwn_Resource * resource, int index, cnwn_File * source_f, cnwn_File * destination_f)
+// {
+//     if (!CNWN_RESOURCE_TYPE_IS_ERF(resource->type)) {
+//         cnwn_set_error("%s() type mismatch %d\n", __func__, resource->type);
+//         return -1;
+//     }
+//     int64_t retbytes = 0;
+//     int64_t ret;
+//     if (index == 0) {
+//         char tmps[128] = {0};
+//         const cnwn_ResourceTypeInfo * info = cnwn_resource_type_info(resource->type);
+//         snprintf(tmps, sizeof(tmps), "%s\n", info->extension);
+//         cnwn_strupper(tmps, sizeof(tmps), tmps);
+//         printf("%s %d\n", tmps, resource->type);
+//         ret = cnwn_file_write_string(destination_f, tmps);
+//         if (ret < 0) {
+//             cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
+//             return -1;
+//         }
+//         retbytes += ret;
+//     } else if (index == 1) {
+//         char tmps[128] = {0};
+//         snprintf(tmps, sizeof(tmps), "V%d.%d\n", resource->r.r_erf.major_version, resource->r.r_erf.minor_version);
+//         cnwn_strupper(tmps, sizeof(tmps), tmps);
+//         ret = cnwn_file_write_string(destination_f, tmps);
+//         if (ret < 0) {
+//             cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
+//             return -1;
+//         }
+//         retbytes += ret;
+//     } else if (index == 2) {
+//         ret = cnwn_file_seek(source_f, resource->offset + resource->r.r_erf.localized_strings_offset);
+//         if (ret < 0) {
+//             cnwn_set_error("%s (%s)", cnwn_get_error(), "seek");
+//             return -1;
+//         }
+//         ret = cnwn_file_copy(source_f, resource->r.r_erf.localized_strings_size, destination_f);
+//         if (ret < 0) {
+//             cnwn_set_error("%s (%s)", cnwn_get_error(), "copy");
+//             return -1;
+//         }
+//         retbytes += ret;
+//     }
+//     return retbytes;
+// }

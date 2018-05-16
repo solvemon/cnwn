@@ -81,10 +81,16 @@ int cnwn_resource_init(cnwn_Resource * resource, cnwn_ResourceType type, const c
     resource->offset = offset;
     resource->size = size;
     resource->parent = parent;
+    char filename[CNWN_PATH_MAX_SIZE];
+    if (resource->parent != NULL) 
+        snprintf(filename, sizeof(filename), "%s%s%s.%s", cnwn_resource_get_path(resource->parent), CNWN_PATH_SEPARATOR, resource->name, CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
+    else
+        snprintf(filename, sizeof(filename), "%s.%s", resource->name, CNWN_RESOURCE_TYPE_EXTENSION(resource->type));
+    resource->path = cnwn_strdup(filename);
     cnwn_ContainerCallbacks cb_resources = {NULL, &cnwn_resource_array_deinit_elements, NULL};
     cnwn_array_init(&resource->resources, sizeof(cnwn_Resource), &cb_resources);
     cnwn_ContainerCallbacks cb_meta_files = {NULL, &cnwn_meta_file_array_deinit_elements, NULL};
-    cnwn_array_init(&resource->resources, sizeof(cnwn_Resource), &cb_meta_files);    
+    cnwn_array_init(&resource->meta_files, sizeof(cnwn_MetaFile), &cb_meta_files);    
     return 0;
 }
 
@@ -123,6 +129,8 @@ void cnwn_resource_deinit(cnwn_Resource * resource)
     cnwn_array_deinit(&resource->meta_files);
     if (resource->name != NULL)
         free(resource->name);
+    if (resource->path != NULL)
+        free(resource->path);
     memset(resource, 0, sizeof(cnwn_Resource));
 }
 
