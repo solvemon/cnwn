@@ -79,9 +79,9 @@ int cnwn_cnwna_settings_init(cnwn_CNWNASettings * settings, int argc, char * arg
             }
         } else if (settings->command == NULL) {
             settings->command = cnwn_strdup(result.arg != NULL ? result.arg : "");
-            if (cnwn_strstartswith("list", settings->command)) 
+            if (cnwn_strstartswith("list", settings->command) || cnwn_strcmp("ls", settings->command) == 0) 
                 options = CNWN_CNWNA_OPTIONS_LIST;
-            else if (cnwn_strstartswith("extract", settings->command)) 
+            else if (cnwn_strstartswith("extract", settings->command) || cnwn_strcmp("x", settings->command) == 0) 
                 options = CNWN_CNWNA_OPTIONS_EXTRACT;
             else if (cnwn_strstartswith("create", settings->command))
                 options = CNWN_CNWNA_OPTIONS_CREATE;
@@ -215,16 +215,18 @@ int cnwn_cnwna_print_version(void)
 
 int cnwn_cnwna_execute(const cnwn_CNWNASettings * settings)
 {
-    if (cnwn_strstartswith("list", settings->command)) {
+    if (cnwn_strstartswith("list", settings->command) || cnwn_strcmp("ls", settings->command) == 0) {
+        
         return cnwn_cnwna_execute_list(settings->path, settings->quiet, settings->depth, NULL);
     }
-    if (cnwn_strstartswith("extract", settings->command)) {
+    if (cnwn_strstartswith("extract", settings->command) || cnwn_strcmp("x", settings->command) == 0) {
         return cnwn_cnwna_execute_extract(settings->path, settings->quiet, settings->depth, NULL, settings->output_path);
     }
     if (cnwn_strstartswith("create", settings->command)) {
         return cnwn_cnwna_execute_create(settings->path, settings->quiet, settings->depth, NULL);
     }
-    return 0;
+    cnwn_set_error("no command specified");
+    return -1;
 }
 
 int cnwn_cnwna_execute_list(const char * path, bool quiet, int depth, const cnwn_RegexpArray * regexps)
