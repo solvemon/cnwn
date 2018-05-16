@@ -204,7 +204,7 @@ int cnwn_resource_init_from_file_erf(cnwn_Resource * resource, cnwn_File * f)
         }
         for (int i = 0; i < num_entries; i++) {
             cnwn_Resource subresource;
-            int ret = cnwn_resource_init_from_file(&subresource, entries[i].type, entries[i].key, entries[i].size, resource, f);
+            int ret = cnwn_resource_init_from_file(&subresource, entries[i].type, entries[i].key, resource->offset + entries[i].offset, entries[i].size, resource, f);
             if (ret < 0) {
                 cnwn_set_error("%s (%s \"%s\")", cnwn_get_error(), "subresource", entries[i].key);
                 free(entries);

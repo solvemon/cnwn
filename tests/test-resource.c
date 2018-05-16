@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
     if (f != NULL) {
         int64_t size = cnwn_file_size(f);
         if (size >= 0) {
-            int ret = cnwn_resource_init_from_file(&resource, CNWN_RESOURCE_TYPE_MOD, "test", size, NULL, f);
+            int ret = cnwn_resource_init_from_file(&resource, CNWN_RESOURCE_TYPE_MOD, "test", 0, size, NULL, f);
             if (ret >= 0) {
                 printf("Initialized resource.\n");
                 // dump_resource(&resource, 0);

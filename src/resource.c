@@ -52,13 +52,8 @@ int cnwn_resource_init(cnwn_Resource * resource, cnwn_ResourceType type, const c
     return 0;
 }
 
-int cnwn_resource_init_from_file(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t size, cnwn_Resource * parent, cnwn_File * input_f)
+int cnwn_resource_init_from_file(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t offset, int64_t size, cnwn_Resource * parent, cnwn_File * input_f)
 {
-    int64_t offset = cnwn_file_get_seek(input_f);
-    if (offset < 0) {
-        cnwn_set_error("%s (%s)", cnwn_get_error(), "seek");
-        return -1;
-    }
     if (cnwn_resource_init(resource, type, name, offset, size, parent) < 0)
         return -1;
     const cnwn_ResourceHandler * handler = CNWN_RESOURCE_HANDLER(type);

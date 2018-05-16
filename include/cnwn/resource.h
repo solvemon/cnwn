@@ -384,14 +384,14 @@ extern CNWN_PUBLIC int cnwn_resource_init(cnwn_Resource * resource, cnwn_Resourc
  * @param resource The resource struct to initialize.
  * @param type The resource type.
  * @param name The name of the resource.
- * @param offset The offset in a file (zero if the file wasn't initialized from file).
+ * @param offset The offset in a file.
  * @param size The size of the resource.
  * @param parent The parent or NULL if the resource is a top resource.
- * @param input_f The input file to read from, must be at the correct offset which will be stored in the resource.
+ * @param input_f The input file to read from, must be at the correct offset which will be stored in the resource (this function will not seek).
  * @returns Zero on success and a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_resource_init_from_file(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t size, cnwn_Resource * parent, cnwn_File * input_f);
+extern CNWN_PUBLIC int cnwn_resource_init_from_file(cnwn_Resource * resource, cnwn_ResourceType type, const char * name, int64_t offset, int64_t size, cnwn_Resource * parent, cnwn_File * input_f);
 
 /**
  * Initialize a resource from path, usually when archiving to ERF/BIF.
