@@ -8,6 +8,7 @@
 #include "cnwn/options.h"
 #include "cnwn/containers.h"
 #include "cnwn/regexp.h"
+#include "cnwn/resource.h"
 
 /**
  * @see struct cnwn_CNWNASettings_s
@@ -48,6 +49,11 @@ struct cnwn_CNWNASettings_s {
      * No output to stdout.
      */
     bool quiet;
+
+    /**
+     * Verbose output to stdout.
+     */
+    bool verbose;
     
     /**
      * Recursion depth.
@@ -138,13 +144,13 @@ extern CNWN_PUBLIC int cnwn_cnwna_execute(const cnwn_CNWNASettings * settings);
 /**
  * Execute the list command (the command in settings will be ignored).
  * @param path The path to the file to list from.
- * @param quiet True for no stdout output.
+ * @param verbose True for verbose stdout output.
  * @param depth The number of levels to recurse listion, a negative value will disable the limit.
  * @param regexps Regular expressions to filter what will be listed, NULL for no filter.
  * @returns The number of listed items or a negative value on error.
  * @see cnwn_get_error() if this function returns a negative value.
  */
-extern CNWN_PUBLIC int cnwn_cnwna_execute_list(const char * path, bool quiet, int depth, const cnwn_RegexpArray * regexps);
+extern CNWN_PUBLIC int cnwn_cnwna_execute_list(const char * path, bool verbose, int depth, const cnwn_RegexpArray * regexps);
 
 /**
  * Execute the extract command (the command in settings will be ignored).

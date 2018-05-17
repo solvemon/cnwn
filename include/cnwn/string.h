@@ -484,6 +484,349 @@ extern CNWN_PUBLIC char ** cnwn_strings_cat(char ** strings, char ** other);
  */
 extern CNWN_PUBLIC void cnwn_strings_free(char ** strings);
 
+/**
+ * Get the integer base for a string based on it's prefix.
+ * @param s The string to get a base from.
+ * @returns The integer base (2, 8, 10 or 16) or zero if no valid prefix and no valid number was found.
+ */
+extern CNWN_PUBLIC int cnwn_strintbase(const char * s);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strshort(const char * s, int base, short * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC short cnwn_strtoshort(const char * s, int base, short errvalue);
+
+/**
+ * Parse a string into an unsignedinteger.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strushort(const char * s, int base, unsigned short * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC unsigned short cnwn_strtoushort(const char * s, int base, unsigned short errvalue);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strint(const char * s, int base, int * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC int cnwn_strtoint(const char * s, int base, int errvalue);
+
+/**
+ * Parse a string into an unsignedinteger.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_struint(const char * s, int base, unsigned int * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC unsigned int cnwn_strtouint(const char * s, int base, unsigned int errvalue);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strlong(const char * s, int base, long * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC long cnwn_strtolong(const char * s, int base, long errvalue);
+
+/**
+ * Parse a string into an unsignedinteger.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strulong(const char * s, int base, unsigned long * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC unsigned long cnwn_strtoulong(const char * s, int base, unsigned long errvalue);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strlonglong(const char * s, int base, long long * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC long long cnwn_strtolonglong(const char * s, int base, long long errvalue);
+
+/**
+ * Parse a string into an unsignedinteger.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strulonglong(const char * s, int base, unsigned long long * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC unsigned long long cnwn_strtoulonglong(const char * s, int base, unsigned long long errvalue);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strint8(const char * s, int base, int8_t * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC int8_t cnwn_strtoint8(const char * s, int base, int8_t errvalue);
+
+/**
+ * Parse a string into an unsignedinteger.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_struint8(const char * s, int base, uint8_t * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC uint8_t cnwn_strtouint8(const char * s, int base, uint8_t errvalue);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strint16(const char * s, int base, int16_t * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC int16_t cnwn_strtoint16(const char * s, int base, int16_t errvalue);
+
+/**
+ * Parse a string into an unsignedinteger.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_struint16(const char * s, int base, uint16_t * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC uint16_t cnwn_strtouint16(const char * s, int base, uint16_t errvalue);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strint32(const char * s, int base, int32_t * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC int32_t cnwn_strtoint32(const char * s, int base, int32_t errvalue);
+
+/**
+ * Parse a string into an unsignedinteger.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_struint32(const char * s, int base, uint32_t * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC uint32_t cnwn_strtouint32(const char * s, int base, uint32_t errvalue);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strint64(const char * s, int base, int64_t * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC int64_t cnwn_strtoint64(const char * s, int base, int64_t errvalue);
+
+/**
+ * Parse a string into an unsignedinteger.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param[out] ret_value Return the integer value here, pass NULL to just check if it's a valid integer string.
+ * @returns True if the string could be parsed to an integer, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_struint64(const char * s, int base, uint64_t * ret_value);
+
+/**
+ * Parse a string into an integer.
+ * @param s The string to parse.
+ * @param base Chosen base, zero or negative to auto-detect from possible prefix of @p s.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The integer value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC uint64_t cnwn_strtouint64(const char * s, int base, uint64_t errvalue);
+
+/**
+ * Parse a string into a double.
+ * @param s The string to parse.
+ * @param[out] ret_value Return the double value here, pass NULL to just check if it's a valid floating point string.
+ * @returns True if the string could be parsed to a double, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strdouble(const char * s, double * ret_value);
+
+/**
+ * Parse a string into a double.
+ * @param s The string to parse.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The floating point value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC double cnwn_strtodouble(const char * s, double errvalue);
+
+/**
+ * Parse a string into a float.
+ * @param s The string to parse.
+ * @param[out] ret_value Return the float value here, pass NULL to just check if it's a valid floating point string.
+ * @returns True if the string could be parsed to a float, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strfloat(const char * s, float * ret_value);
+
+/**
+ * Parse a string into a float.
+ * @param s The string to parse.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The floating point value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC float cnwn_strtofloat(const char * s, float errvalue);
+
+/**
+ * Parse a string into a bool.
+ * @param s The string to parse.
+ * @param[out] ret_value Return the bool value here, pass NULL to just check if it's a valid bool string.
+ * @returns True if the string could be parsed to a bool, false if not.
+ */
+extern CNWN_PUBLIC bool cnwn_strbool(const char * s, bool * ret_value);
+
+/**
+ * Parse a string into a bool.
+ * @param s The string to parse.
+ * @param errvalue The value to return if @p s could not be parsed.
+ * @returns The bool value or @p errvalue if @p s could not be parsed.
+ */
+extern CNWN_PUBLIC bool cnwn_strtobool(const char * s, bool errvalue);
+
 #ifdef __cplusplus
 }
 #endif

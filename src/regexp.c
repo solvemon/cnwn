@@ -59,21 +59,18 @@ cnwn_RegexpArray * cnwn_regexp_array_new(int num_strings, const char ** strings)
     return ret;
 }
 
-cnwn_RegexpArray * cnwn_regexp_array_new_args(int argc, char * argv[])
+cnwn_RegexpArray * cnwn_regexp_array_new2(const cnwn_StringArray * string_array)
 {
-    int num_strings = 0;
-    for (int i = 0; i < argc && num_strings < argc; i++) 
-        if (!CNWN_OPTION_ARG_IS_OPTION(argv[i]))
-            num_strings++;
     cnwn_RegexpArray array = {0};
+    int num_strings = cnwn_array_get_length(string_array);
     array.length = num_strings;
     if (num_strings > 0) {
         array.regexps = malloc(sizeof(cnwn_Regexp) * num_strings);
         int count = 0;
-        for (int i = 0; i < argc && count < num_strings; i++) {
-            if (!CNWN_OPTION_ARG_IS_OPTION(argv[i])
-                && !cnwn_strisblank(argv[i])) {
-                if (cnwn_regexp_init(array.regexps + count, argv[i]) < 0) {
+        for (int i = 0; i < num_strings; i++) {
+            const char * s = cnwn_string_array_get(string_array, i);
+            if (!cnwn_strisblank(s)) {
+                if (cnwn_regexp_init(array.regexps + count, s) < 0) {
                     cnwn_set_error("%s (regexp #%d)", cnwn_get_error(), i);
                     free(array.regexps);
                     return NULL;

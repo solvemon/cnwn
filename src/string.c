@@ -820,3 +820,324 @@ void cnwn_strings_free(char ** strings)
         free(strings);
     }
 }
+
+int cnwn_strintbase(const char * s)
+{
+    if (s != NULL && s[0] != 0) {
+        int offset = (s[0] == '+' || s[0] == '-' ? 1 : 0);
+        if ((s[offset] == '0' && (s[offset + 1] == 'd' || s[offset + 1] == 'D'))
+            || (s[offset] >= '0' && s[offset] <= '9' && (s[offset + 1] == 0 || (s[offset + 1] >= '0' && s[offset + 1] <= '9'))))
+            return 10;
+        else if ((s[offset] == '$' || (s[offset] == '0' && (s[offset + 1] == 'x' || s[offset + 1] == 'X')))
+                 && ((s[offset + 2] >= '0' && s[offset + 2] <= '9') || (s[offset + 2] >= 'a' && s[offset + 2] <= 'f') || (s[offset + 2] >= 'A' && s[offset + 2] <= 'F')))
+            return 16;
+        else if ((s[offset] == '@' || (s[offset] == '0' && (s[offset + 1] == 'o' || s[offset + 1] == 'O')))
+                 && (s[offset + 2] >= '0' && s[offset + 2] <= '7'))
+            return 8;
+        else if ((s[offset] == '%' || (s[offset] == '0' && (s[offset + 1] == 'b' || s[offset + 1] == 'B')))
+                 && (s[offset + 2] >= '0' && s[offset + 2] <= '1'))
+            return 2;
+    }
+    return 0;
+}
+
+#define CNWN_DEFINE_INT_FUNC(funcsuffix, inttype, intmax, intmin) \
+    bool cnwn_str##funcsuffix(const char * s, int base, inttype * ret_value) \
+    { \
+        if (cnwn_strisblank(s)) \
+            return false; \
+        if (base <= 0) \
+            base = cnwn_strintbase(s); \
+        if (base == 10 || base == 16 || base == 8 || base == 2) { \
+            int start = (s[0] == '+' || s[0] == '-' ? 1 : 0); \
+            if (base == 16)  \
+                start += (s[start] == '$' ? 1 : (s[start] == '0' && (s[start + 1] == 'x' || s[start + 1] == 'X')) ? 2 : 0); \
+            else if (base == 8)  \
+                start += (s[start] == '@' ? 1 : (s[start] == '0' && (s[start + 1] == 'o' || s[start + 1] == 'O')) ? 2 : 0); \
+            else if (base == 2)  \
+                start += (s[start] == '%' ? 1 : (s[start] == '0' && (s[start + 1] == 'b' || s[start + 1] == 'B')) ? 2 : 0); \
+            int len = start; \
+            while (s[len] != 0) \
+                len++; \
+            inttype multiplier = (s[0] == '-' ? -1 : 1); \
+            inttype result = 0; \
+            int offset = len - 1; \
+            while (offset >= start) { \
+                inttype digitvalue = 0; \
+                if (base == 10) { \
+                    if (s[offset] >= '0' && s[offset] <= '9') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'0'); \
+                    else \
+                        return false; \
+                } else if (base == 16) { \
+                    if (s[offset] >= '0' && s[offset] <= '9') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'0'); \
+                    else if (s[offset] >= 'a' && s[offset] <= 'f') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'a') + 10; \
+                    else if (s[offset] >= 'A' && s[offset] <= 'F') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'A') + 10; \
+                    else \
+                        return false; \
+                } else if (base == 8) { \
+                    if (s[offset] >= '0' && s[offset] <= '7') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'0'); \
+                    else \
+                        return false; \
+                } else if (base == 2) { \
+                    if (s[offset] >= '0' && s[offset] <= '1') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'0'); \
+                    else \
+                        return false; \
+                } else \
+                    return false; \
+                inttype value = digitvalue * multiplier; \
+                if (value / multiplier != digitvalue) \
+                    return false; \
+                if (multiplier > 0 && value > intmax - result) \
+                    return false; \
+                else if (multiplier < 0 && value < intmin - result) \
+                    return false; \
+                result += value; \
+                if (offset >= start) { \
+                    inttype premult = multiplier * (inttype)base; \
+                    if (premult / (inttype)base != multiplier) { \
+                        offset--; \
+                        while (offset >= start)  \
+                            if (s[offset--] != '0')  \
+                                return false; \
+                        break; \
+                    } \
+                    multiplier = premult; \
+                } \
+                offset--; \
+            } \
+            if (ret_value != NULL) \
+                *ret_value = result; \
+            return true; \
+        } \
+        return false; \
+    } \
+    inttype cnwn_strto##funcsuffix(const char * s, int base, inttype errvalue) \
+    { \
+        inttype ret; \
+        if (cnwn_str##funcsuffix(s, base, &ret)) \
+            return ret; \
+        return errvalue; \
+    }
+
+#define CNWN_DEFINE_UINT_FUNC(funcsuffix, inttype, intmax) \
+    bool cnwn_str##funcsuffix(const char * s, int base, inttype * ret_value) \
+    { \
+        if (cnwn_strisblank(s)) \
+            return false; \
+        if (base <= 0) \
+            base = cnwn_strintbase(s); \
+        if (base == 10 || base == 16 || base == 8 || base == 2) { \
+            int start = (s[0] == '+' ? 1 : 0); \
+            if (base == 16)  \
+                start += (s[start] == '$' ? 1 : (s[start] == '0' && (s[start + 1] == 'x' || s[start + 1] == 'X')) ? 2 : 0); \
+            else if (base == 8)  \
+                start += (s[start] == '@' ? 1 : (s[start] == '0' && (s[start + 1] == 'o' || s[start + 1] == 'O')) ? 2 : 0); \
+            else if (base == 2)  \
+                start += (s[start] == '%' ? 1 : (s[start] == '0' && (s[start + 1] == 'b' || s[start + 1] == 'B')) ? 2 : 0); \
+            int len = start; \
+            while (s[len] != 0) \
+                len++; \
+            inttype multiplier = 1; \
+            inttype result = 0; \
+            int offset = len - 1; \
+            while (offset >= start) { \
+                inttype digitvalue = 0; \
+                if (base == 10) { \
+                    if (s[offset] >= '0' && s[offset] <= '9') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'0'); \
+                    else \
+                        return false; \
+                } else if (base == 16) { \
+                    if (s[offset] >= '0' && s[offset] <= '9') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'0'); \
+                    else if (s[offset] >= 'a' && s[offset] <= 'f') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'a') + 10; \
+                    else if (s[offset] >= 'A' && s[offset] <= 'F') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'A') + 10; \
+                    else \
+                        return false; \
+                } else if (base == 8) { \
+                    if (s[offset] >= '0' && s[offset] <= '7') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'0'); \
+                    else \
+                        return false; \
+                } else if (base == 2) { \
+                    if (s[offset] >= '0' && s[offset] <= '1') \
+                        digitvalue = ((inttype)s[offset]) - ((inttype)'0'); \
+                    else \
+                        return false; \
+                } else \
+                    return false; \
+                inttype value = digitvalue * multiplier; \
+                if (value / multiplier != digitvalue) \
+                    return false; \
+                if (value > intmax - result) \
+                    return false; \
+                result += value; \
+                if (offset >= start) { \
+                    inttype premult = multiplier * (inttype)base; \
+                    if (premult / (inttype)base != multiplier) { \
+                        offset--; \
+                        while (offset >= start)  \
+                            if (s[offset--] != '0')  \
+                                return false; \
+                        break; \
+                    } \
+                    multiplier = premult; \
+                } \
+                offset--; \
+            } \
+            if (ret_value != NULL) \
+                *ret_value = result; \
+            return true; \
+        } \
+        return false; \
+    } \
+    inttype cnwn_strto##funcsuffix(const char * s, int base, inttype errvalue) \
+    { \
+        inttype ret; \
+        if (cnwn_str##funcsuffix(s, base, &ret)) \
+            return ret; \
+        return errvalue; \
+    }
+
+CNWN_DEFINE_INT_FUNC(short, short, SHRT_MAX, SHRT_MIN)
+CNWN_DEFINE_UINT_FUNC(ushort, unsigned short, USHRT_MAX)
+CNWN_DEFINE_INT_FUNC(int, int, INT_MAX, INT_MIN)
+CNWN_DEFINE_UINT_FUNC(uint, unsigned int, UINT_MAX)
+CNWN_DEFINE_INT_FUNC(long, long, LONG_MAX, LONG_MIN)
+CNWN_DEFINE_UINT_FUNC(ulong, unsigned long, ULONG_MAX)
+CNWN_DEFINE_INT_FUNC(longlong, long long, LLONG_MAX, LLONG_MIN)
+CNWN_DEFINE_UINT_FUNC(ulonglong, unsigned long long, ULLONG_MAX)
+CNWN_DEFINE_INT_FUNC(int8, int8_t, INT8_MAX, INT8_MIN)
+CNWN_DEFINE_UINT_FUNC(uint8, uint8_t, UINT8_MAX)
+CNWN_DEFINE_INT_FUNC(int16, int16_t, INT16_MAX, INT16_MIN)
+CNWN_DEFINE_UINT_FUNC(uint16, uint16_t, UINT16_MAX)
+CNWN_DEFINE_INT_FUNC(int32, int32_t, INT32_MAX, INT32_MIN)
+CNWN_DEFINE_UINT_FUNC(uint32, uint32_t, UINT32_MAX)
+CNWN_DEFINE_INT_FUNC(int64, int64_t, INT64_MAX, INT64_MIN)
+CNWN_DEFINE_UINT_FUNC(uint64, uint64_t, UINT64_MAX)
+
+bool cnwn_strdouble(const char * s, double * ret_value)
+{
+    if (s != NULL && s[0] != 0) {
+        char * endptr = NULL;
+        double r = strtod(s, &endptr);
+        if (endptr != NULL && *endptr == 0) {
+            if (ret_value != NULL)
+                *ret_value = r;
+            return 1;
+        }
+    }
+    return false;
+}
+
+double cnwn_strtodouble(const char * s, double errvalue)
+{
+    double ret;
+    if (cnwn_strdouble(s, &ret))
+        return ret;
+    return errvalue;
+}
+
+bool cnwn_strfloat(const char * s, float * ret_value)
+{
+    if (s != NULL && s[0] != 0) {
+        char * endptr = NULL;
+        float r = strtod(s, &endptr);
+        if (endptr != NULL && *endptr == 0) {
+            if (ret_value != NULL)
+                *ret_value = r;
+            return 1;
+        }
+    }
+    return false;
+}
+
+float cnwn_strtofloat(const char * s, float errvalue)
+{
+    float ret;
+    if (cnwn_strfloat(s, &ret))
+        return ret;
+    return errvalue;
+}
+
+bool cnwn_strbool(const char * s, bool * ret_value)
+{
+    if (s != NULL && s[0] != 0) {
+        if (s[0] == '1' && s[1] == 0) {
+            if (ret_value != NULL)
+                *ret_value = true;
+            return 1;
+        }
+        if (s[0] == '0' && s[1] == 0) {
+            if (ret_value != NULL)
+                *ret_value = false;
+            return 1;
+        }
+        if ((s[0] == 'o' || s[0] == 'O')
+            && (s[1] == 'n' || s[1] == 'N')
+            && s[2] == 0) {
+            if (ret_value != NULL)
+                *ret_value = true;
+            return 1;
+        }
+        if ((s[0] == 'n' || s[0] == 'N')
+            && (s[1] == 'o' || s[1] == 'O')
+            && s[2] == 0) {
+            if (ret_value != NULL)
+                *ret_value = false;
+            return 1;
+        }
+        if ((s[0] == 'y' || s[0] == 'Y')
+            && (s[1] == 'e' || s[1] == 'E')
+            && (s[2] == 's' || s[2] == 'S')
+            && s[3] == 0) {
+            if (ret_value != NULL)
+                *ret_value = true;
+            return 1;
+        }
+        if ((s[0] == 'o' || s[0] == 'O')
+            && (s[1] == 'f' || s[1] == 'F')
+            && (s[2] == 'f' || s[2] == 'F')
+            && s[3] == 0) {
+            if (ret_value != NULL)
+                *ret_value = false;
+            return 1;
+        }
+        if ((s[0] == 't' || s[0] == 'T')
+            && (s[1] == 'r' || s[1] == 'R')
+            && (s[2] == 'u' || s[2] == 'U')
+            && (s[3] == 'e' || s[3] == 'E')
+            && s[4] == 0) {
+            if (ret_value != NULL)
+                *ret_value = true;
+            return 1;
+        }
+        if ((s[0] == 'f' || s[0] == 'F')
+            && (s[1] == 'a' || s[1] == 'A')
+            && (s[2] == 'l' || s[2] == 'L')
+            && (s[3] == 's' || s[3] == 'S')
+            && (s[4] == 'e' || s[4] == 'E')
+            && s[5] == 0) {
+            if (ret_value != NULL)
+                *ret_value = false;
+            return 1;
+        }
+    }
+    return false;
+}
+
+bool cnwn_strtobool(const char * s, bool errvalue)
+{
+    bool ret;
+    if (cnwn_strbool(s, &ret))
+        return ret;
+    return errvalue;
+}

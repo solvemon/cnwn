@@ -200,7 +200,7 @@ struct cnwn_MetaFile_s {
      * The name of the meta file.
      */
     char name[128];
-
+    
     /**
      * A description of the meta file.
      */

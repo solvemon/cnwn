@@ -7,7 +7,7 @@
 
 #include "cnwn/common.h"
 #include "cnwn/string.h"
-#include "cnwn/options.h"
+#include "cnwn/containers.h"
 
 /**
  * Definition depends on platform:
@@ -73,13 +73,12 @@ extern CNWN_PUBLIC bool cnwn_regexp_match(const cnwn_Regexp * regexp, const char
 extern CNWN_PUBLIC cnwn_RegexpArray * cnwn_regexp_array_new(int num_strings, const char ** strings);
 
 /**
- * Create a new regexp array from arguments.
- * @param argc The number of arguments.
- * @param argv The arguments.
+ * Create a new regexp array from a string array.
+ * @param string_array The string array.
  * @returns The new regexp array or NULL on error.
  * @see cnwn_get_error() if this function returns NULL.
  */
-extern CNWN_PUBLIC cnwn_RegexpArray * cnwn_regexp_array_new_args(int argc, char * argv[]);
+extern CNWN_PUBLIC cnwn_RegexpArray * cnwn_regexp_array_new2(const cnwn_StringArray * string_array);
 
 /**
  * Free a regexp array.
