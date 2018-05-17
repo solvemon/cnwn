@@ -21,6 +21,7 @@ const cnwn_Option CNWN_CNWNA_OPTIONS_EXTRACT[] = {
 
 const cnwn_Option CNWN_CNWNA_OPTIONS_CREATE[] = {
     {'v', "version", "x.y", "Set the version for the file format.", 1},
+    {'q', "quiet", NULL, "Supress output to stdout.", 2},
     {0}
 };
 
@@ -169,7 +170,7 @@ int cnwn_cnwna_print_help(void)
         }
         ret += fp;        
     }
-    fp = fprintf(stdout, "\n'list' command:\n");
+    fp = fprintf(stdout, "\nlist [options] [regular expressions]:\n");
     if (fp < 0) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
@@ -185,7 +186,7 @@ int cnwn_cnwna_print_help(void)
         }
         ret += fp;        
     }
-    fp = fprintf(stdout, "\n'extract' command:\n");
+    fp = fprintf(stdout, "\nextract [options] [regular expressions]:\n");
     if (fp < 0) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
@@ -201,7 +202,7 @@ int cnwn_cnwna_print_help(void)
         }
         ret += fp;        
     }
-    fp = fprintf(stdout, "\n'create' command:\n");
+    fp = fprintf(stdout, "\ncreate [options] [files and directories]:\n");
     if (fp < 0) {
         cnwn_set_error("%s", strerror(errno));
         return -1;
